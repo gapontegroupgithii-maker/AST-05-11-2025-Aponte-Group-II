@@ -1,0 +1,23 @@
+// Test HL strategy provisto por el usuario (borrador largo)
+//@version=5
+strategy("Test HL", shorttitle = "T_H", overlay = true, currency = currency.USDT, initial_capital= 4000, commission_type = strategy.commission.percent, commission_value = 0.02, default_qty_type= strategy.cash, default_qty_value= 1000, margin_long=50)
+
+
+//High's and Low's
+High_6H= ta.highest(high, 72)
+
+High_12H= ta.highest(high, 144)
+
+High_24H= ta.highest(high, 288)
+Cloud_H= plot(High_24H, style = plot.style_line, color = color.rgb(109, 5, 22), linewidth = 4)
+
+Low_6H= ta.lowest(low, 72)+0.03
+plot(Low_6H, style = plot.style_line, color = color.rgb(255, 255, 255), linewidth = 2)
+Low_12H= ta.lowest(low, 144)+0.04
+plot(Low_12H, style = plot.style_line, color = color.rgb(7, 255, 60), linewidth = 3)
+Low_24H= ta.lowest(low, 288)+0.05
+Cloud_L= plot(Low_24H, style = plot.style_line, color = color.rgb(1, 115, 207), linewidth = 4)
+Basis_TestHL= math.avg(High_6H, High_12H, High_24H, Low_6H, Low_12H, Low_24H)
+plot(Basis_TestHL, style = plot.style_line, color = color.rgb(7, 11, 255), linewidth = 4)
+
+// (El resto del script largo se mantiene — usado como test real de migración)

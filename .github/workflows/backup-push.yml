@@ -1,0 +1,43 @@
+name: Backup push
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-and-push-backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create zip of repo
+        run: |
+          TS=$(date +"%Y-%m-%d_%H%M%S")
+          ZIPNAME="backup-$TS.zip"
+          zip -r "$ZIPNAME" . -x "node_modules/*" ".git/*" "backups/*"
+          echo "ZIP created: $ZIPNAME"
+        shell: bash
+
+      - name: Upload to target repo
+        if: ${{ secrets.BACKUP_PAT && secrets.BACKUP_REPO }}
+        env:
+          BACKUP_PAT: ${{ secrets.BACKUP_PAT }}
+          BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
+        run: |
+          TS=$(date +"%Y-%m-%d_%H%M%S")
+          ZIPNAME="backup-$TS.zip"
+          # Create a temporary clone and push the zip as a commit to the target repo
+          git clone https://${BACKUP_PAT}@github.com/${BACKUP_REPO} target_repo
+          mv "$ZIPNAME" target_repo/
+          cd target_repo
+          git add "$ZIPNAME"
+          git commit -m "Backup $TS"
+          git push origin main || git push origin HEAD
+        shell: bash
+
+# To use this workflow securely:
+# - Create a repository where you want backups stored (private).
+# - Add two secrets to this repo: BACKUP_PAT (a personal access token with repo scope) and BACKUP_REPO (owner/repo path, e.g. user/backups-repo).
+# - Run this workflow manually from the Actions tab to push a new backup zip to that target repo.

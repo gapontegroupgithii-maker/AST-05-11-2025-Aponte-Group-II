@@ -1,0 +1,470 @@
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { createPortal } from 'react-dom';
+import { createChart, ColorType, CandlestickSeries, IChartApi, ISeriesApi } from "lightweight-charts";
+import { TrendingUp } from "lucide-react";
+import ChartDrawingLayer from "./ChartDrawingLayer";
+import DrawingPropertiesPanel from "./DrawingPropertiesPanel";
+import PriceScaleHandle from "./PriceScaleHandle";
+import { useAdvancedDrawing } from "@/hooks/useAdvancedDrawing";
+import { useDrawingStore, IDrawing } from "@/store/drawingStore";
+import { pointToCoordinate, coordinateToPoint } from "@/utils/snapUtils";
+import { calculateMeasurements } from "@/utils/drawingPrimitives";
+import useMarketData from '@/hooks/useMarketData';
+
+interface TradingChartProps {
+	symbol: string;
+	timeframe: string;
+	drawingTools: ReturnType<typeof import("@/hooks/useDrawingTools").useDrawingTools>;
+	isMarketPanelOpen?: boolean;
+}
+
+interface OHLCData {
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	volume: number;
+}
+
+const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: TradingChartProps) => {
+	const chartContainerRef = useRef<HTMLDivElement>(null);
+	const overlayRootRef = useRef<HTMLDivElement | null>(null);
+	const chartRef = useRef<IChartApi | null>(null);
+	const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+	const barSpacingRef = useRef<number>(8);
+	const priceScaleMarginsRef = useRef<{ top: number; bottom: number }>({ top: 0.1, bottom: 0.1 });
+	const [currentPrice, setCurrentPrice] = useState<number>(0);
+	const [priceChange, setPriceChange] = useState<number>(0);
+	const [ohlcData, setOhlcData] = useState<OHLCData>({
+		open: 0,
+		high: 0,
+		low: 0,
+		close: 0,
+		volume: 0,
+	});
+	const [priceData, setPriceData] = useState<Array<{ time: number; open: number; high: number; low: number; close: number; volume: number }>>([]);
+	const [crosshair, setCrosshair] = useState<{ x: number; y: number; time?: number | null; price?: number | null } | null>(null);
+	const [barSpacing, setBarSpacing] = useState<number>(() => barSpacingRef.current);
+	const [verticalStretch, setVerticalStretch] = useState<number>(0.1);
+	const [crosshairOn, setCrosshairOn] = useState<boolean>(true);
+	const [gridOn, setGridOn] = useState<boolean>(true);
+	// compute right offset so the price-scale handle sits left of the MarketPanel overlay
+	// MarketPanel uses Tailwind w-64 when open (16rem = 256px) and w-14 when closed (3.5rem = 56px)
+	const panelWidthPx = isMarketPanelOpen ? 256 : 56;
+	const priceScaleRightOffsetPx = panelWidthPx + 8; // small gap of 8px
+ 
+
+	const { drawings: legacyDrawings } = drawingTools;
+	const { drawings: storeDrawings } = useDrawingStore();
+	const { handleMouseDown, handleMouseMove, handleMouseUp, handlePointerDown: drawPointerDown, handlePointerMove: drawPointerMove, handlePointerUp: drawPointerUp, isDrawing, previewDrawing, handleDrawingClick } = useAdvancedDrawing(
+		chartRef.current,
+		seriesRef.current,
+		chartContainerRef,
+		timeframe
+	);
+	const { incrementClickCount, resetClickCount, selectDrawing, removeDrawing, updateDrawing, dragState, setDragState } = useDrawingStore();
+  
+	// Combine legacy and new drawings (storeDrawings converted to pixel coordinates)
+	const allDrawings = useMemo(() => {
+		const legacy = legacyDrawings;
+		if (!chartRef.current || !seriesRef.current) return legacy;
+
+		const mapped = storeDrawings.map(d => {
+			const points = d.points.map(p => {
+				const { x, y } = pointToCoordinate(p, chartRef.current!, seriesRef.current!);
+				return { x, y, price: p.price, time: p.time };
+			});
+			const measurements = d.type === 'ruler' && d.points.length >= 2
+				? calculateMeasurements(d.points[0], d.points[1], timeframe)
+				: undefined;
+			return {
+				id: d.id,
+				tool: d.type,
+				points,
+				color: d.options.color,
+				selected: d.selected,
+				measurements,
+			};
+		});
+
+		return [...legacy, ...mapped];
+	}, [legacyDrawings, storeDrawings, timeframe]);
+
+	// Apply chart settings (colors, precision, wick) when settings change
+	useEffect(() => {
+		const applySettings = (s: any) => {
+			try {
+				if (!seriesRef.current) return;
+				const opts: any = {};
+				if (s.symbolColorBody) {
+					// map body color to up/down for demo: keep same color for up, slightly darker for down if not provided
+					opts.upColor = s.symbolColorBody;
+					opts.borderColor = s.symbolColorBody;
+					opts.borderUpColor = s.symbolColorBody;
+					opts.borderDownColor = s.symbolColorBody;
+				}
+				// bullish / bearish explicit colors
+				// Prefer explicit body/wick colors if provided, otherwise fallback
+				if (s.bullishBody) {
+					opts.upColor = s.bullishBody;
+					opts.borderUpColor = s.bullishBody;
+				} else if (s.bullishColor) {
+					opts.upColor = s.bullishColor;
+					opts.borderUpColor = s.bullishColor;
+				}
+				if (s.bearishBody) {
+					opts.downColor = s.bearishBody;
+					opts.borderDownColor = s.bearishBody;
+				} else if (s.bearishColor) {
+					opts.downColor = s.bearishColor;
+					opts.borderDownColor = s.bearishColor;
+				}
+
+				// wick colors
+				if (s.bullishWick) opts.wickUpColor = s.bullishWick;
+				else if (s.symbolColorWick) opts.wickUpColor = s.symbolColorWick;
+				if (s.bearishWick) opts.wickDownColor = s.bearishWick;
+				else if (s.symbolColorWick) opts.wickDownColor = s.symbolColorWick;
+				if (s.symbolColorWick) {
+					opts.wickColor = s.symbolColorWick;
+					opts.wickUpColor = s.symbolColorWick;
+					opts.wickDownColor = s.symbolColorWick;
+				}
+				if (typeof s.showBody === 'boolean') {
+					opts.borderVisible = !!s.showBody;
+					opts.bodyVisible = !!s.showBody;
+				}
+				if (typeof s.precision === 'number') {
+					// price format on series
+					opts.priceFormat = { type: 'price', precision: s.precision };
+				}
+				seriesRef.current.applyOptions(opts);
+				// apply chart background if provided
+				try {
+					if (s.chartBg && chartRef.current) {
+						chartRef.current.applyOptions({ layout: { background: { type: ColorType.Solid, color: s.chartBg } } });
+					}
+				} catch (err) {
+							console.debug('[TradingChart] ignored error applying chart background', err);
+						}
+			} catch (err) {
+				// ignore
+			}
+		};
+
+		// load from localStorage initially
+		try {
+			const raw = localStorage.getItem('chartSettings');
+			if (raw) {
+				applySettings(JSON.parse(raw));
+			}
+	} catch (err) { console.debug('[TradingChart] ignored error loading settings from localStorage', err); }
+
+		const handler = (ev: Event) => {
+			try {
+				// @ts-expect-error TS: we expect CustomEvent detail shape here
+				const s = (ev as CustomEvent).detail;
+				applySettings(s);
+			} catch (err) { console.debug('[TradingChart] ignored error in chartSettingsChange handler', err); }
+		};
+		window.addEventListener('chartSettingsChange', handler as EventListener);
+		return () => { window.removeEventListener('chartSettingsChange', handler as EventListener); };
+	}, []);
+
+	// Handlers: wheel zoom centered approximation
+	const onWheel = (e: React.WheelEvent) => {
+		if (!chartRef.current || !chartContainerRef.current) return;
+		// prefer preventing default to avoid page scrolling
+		e.preventDefault();
+		const rect = chartContainerRef.current.getBoundingClientRect();
+		const mouseX = e.clientX - rect.left;
+		const width = rect.width || 1;
+		const ratio = Math.max(0, Math.min(1, mouseX / width));
+
+		// If Ctrl is pressed, zoom vertically (approx) by adjusting rightPriceScale margins
+		if (e.ctrlKey && seriesRef.current && chartRef.current && chartContainerRef.current) {
+			try {
+				const rect = chartContainerRef.current.getBoundingClientRect();
+				const mouseY = e.clientY - rect.top;
+				const height = rect.height || 1;
+				// current prices at top and bottom
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const series = seriesRef.current as any;
+				const topPrice = series.priceToCoordinate ? series.coordinateToPrice(0) : null;
+				// coordinateToPrice expects y coordinate; top=0, bottom=height
+				const priceTop = series.coordinateToPrice(0);
+				const priceBottom = series.coordinateToPrice(height);
+				const priceAtCursor = series.coordinateToPrice(mouseY);
+				if (typeof priceTop !== 'number' || typeof priceBottom !== 'number' || typeof priceAtCursor !== 'number') {
+					// fallback to margins approach
+					const dy = e.deltaY;
+					const delta = dy * 0.0008;
+					const curr = priceScaleMarginsRef.current;
+					const top = Math.max(0, Math.min(0.45, curr.top + delta));
+					const bottom = Math.max(0, Math.min(0.45, curr.bottom + delta));
+					chartRef.current.applyOptions({ rightPriceScale: { scaleMargins: { top, bottom } } });
+					priceScaleMarginsRef.current = { top, bottom };
+					return;
+				}
+
+				const top = priceTop;
+				const bottom = priceBottom;
+				const span = bottom - top;
+				const sensitivity = 0.0014;
+				const factorV = Math.exp(e.deltaY * sensitivity);
+				const center = priceAtCursor;
+				const newSpan = span * factorV;
+				const rel = (priceAtCursor - top) / span; // relative position in [0,1]
+				const newTop = center - rel * newSpan;
+				const newBottom = newTop + newSpan;
+				// set visible price range on right price scale if available
+				try {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const priceScaleApi = (chartRef.current as any).priceScale?.('right');
+					if (priceScaleApi && typeof priceScaleApi.setVisibleRange === 'function') {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						priceScaleApi.setVisibleRange({ from: newTop as any, to: newBottom as any });
+						return;
+					}
+				} catch (err) {
+					// ignore and fallback
+				}
+				// fallback to adjusting margins if priceScale API not available
+				const dy = e.deltaY;
+				const delta = dy * 0.0008;
+				const curr = priceScaleMarginsRef.current;
+				const topM = Math.max(0, Math.min(0.45, curr.top + delta));
+				const bottomM = Math.max(0, Math.min(0.45, curr.bottom + delta));
+				chartRef.current.applyOptions({ rightPriceScale: { scaleMargins: { top: topM, bottom: bottomM } } });
+				priceScaleMarginsRef.current = { top: topM, bottom: bottomM };
+			} catch (err) {
+				// ignore
+			}
+			return;
+		}
+
+		// Horizontal zoom: manipulate visible time range centered on cursor
+		try {
+			const timeScale = chartRef.current.timeScale();
+			const visible = timeScale.getVisibleRange() as unknown;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			if (!visible || typeof (visible as any).from === 'undefined' || typeof (visible as any).to === 'undefined') return;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const from = (visible as any).from as number;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const to = (visible as any).to as number;
+			const span = to - from;
+			// sensitivity: smaller value => slower zoom; positive deltaY -> zoom out
+			const sensitivity = 0.0014;
+			const factor = Math.exp(e.deltaY * sensitivity);
+			// Prevent extreme zooming
+			const minSpan = 1; // minimum logical span (1 second)
+			const maxSpan = Math.max(span, 60 * 60 * 24 * 365 * 10); // very large cap
+			const center = from + span * ratio;
+			const newFrom = center - (center - from) * factor;
+			const newTo = center + (to - center) * factor;
+			let newSpan = newTo - newFrom;
+			if (newSpan < minSpan) {
+				// clamp around center
+				const half = minSpan / 2;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				timeScale.setVisibleRange({ from: (center - half) as any, to: (center + half) as any });
+				return;
+			}
+			if (newSpan > maxSpan) {
+				newSpan = maxSpan;
+				// keep center
+				const half = newSpan / 2;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				timeScale.setVisibleRange({ from: (center - half) as any, to: (center + half) as any });
+				return;
+			}
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			timeScale.setVisibleRange({ from: newFrom as any, to: newTo as any });
+		} catch (err) {
+			// ignore
+		}
+	};
+
+	// ChartControls handlers
+	const handleZoomIn = () => {
+		if (!chartRef.current) return;
+		try {
+			const timeScale = chartRef.current.timeScale();
+			const vis = timeScale.getVisibleRange() as any;
+			if (!vis) return;
+			const from = vis.from as number;
+			const to = vis.to as number;
+			const center = (from + to) / 2;
+			const factor = 0.8; // zoom in
+			const newFrom = center - (center - from) * factor;
+			const newTo = center + (to - center) * factor;
+			timeScale.setVisibleRange({ from: newFrom as any, to: newTo as any });
+		} catch (e) { /* ignore */ }
+	};
+
+	const handleZoomOut = () => {
+		if (!chartRef.current) return;
+		try {
+			const timeScale = chartRef.current.timeScale();
+			const vis = timeScale.getVisibleRange() as any;
+			if (!vis) return;
+			const from = vis.from as number;
+			const to = vis.to as number;
+			const center = (from + to) / 2;
+			const factor = 1.25; // zoom out
+			const newFrom = center - (center - from) * factor;
+			const newTo = center + (to - center) * factor;
+			timeScale.setVisibleRange({ from: newFrom as any, to: newTo as any });
+		} catch (e) { /* ignore */ }
+	};
+
+	const handleResetZoom = () => {
+		try { chartRef.current?.timeScale().fitContent(); } catch (e) { /* ignore */ }
+	};
+
+	const handleToggleCrosshair = () => {
+		const next = !crosshairOn; setCrosshairOn(next);
+		try {
+			chartRef.current?.applyOptions({
+				crosshair: { vertLine: { visible: next }, horzLine: { visible: next } }
+			});
+		} catch (e) { /* ignore */ }
+	};
+
+	const handleToggleGrid = () => {
+		const next = !gridOn; setGridOn(next);
+		try {
+			chartRef.current?.applyOptions({
+				grid: { vertLines: { visible: next }, horzLines: { visible: next } }
+			});
+		} catch (e) { /* ignore */ }
+	};
+
+	const handleSnapshot = async () => {
+		try {
+			// try built-in screenshot if available
+			// @ts-ignore
+			const dataUrl = await (chartRef.current as any)?.takeScreenshot?.();
+			if (dataUrl) {
+				const a = document.createElement('a'); a.href = dataUrl; a.download = `${symbol || 'chart'}-snapshot.png`; a.click();
+				return;
+			}
+		} catch (e) { /* ignore */ }
+		alert('Snapshot not supported in this build');
+	};
+
+	const handleBarSpacingChange = (v: number) => {
+		setBarSpacing(v);
+		try { chartRef.current?.applyOptions({ timeScale: { barSpacing: v } as any } as any); } catch (e) { /* ignore */ }
+	};
+
+	const handleVerticalStretchChange = (v: number) => {
+		setVerticalStretch(v);
+		try { chartRef.current?.applyOptions({ rightPriceScale: { scaleMargins: { top: v * 0.4, bottom: v * 0.4 } } }); } catch (e) { /* ignore */ }
+	};
+
+	const handleAddHLine = () => {
+		try {
+			const price = ohlcData.close || currentPrice || 0;
+			// @ts-ignore
+			seriesRef.current?.createPriceLine?.({ price, color: '#888', lineWidth: 1, lineStyle: 0 });
+		} catch (e) { console.debug('addHLine failed', e); }
+	};
+
+	const handleRemoveSelected = () => {
+		try { removeDrawing(); } catch (e) { /* ignore */ }
+	};
+
+	// Space key handlers to enable temporary pan (hold space to pan)
+	useEffect(() => {
+		const onKeyDown = (ev: KeyboardEvent) => {
+			if (ev.code === 'Space') {
+				// prevent page scroll
+				ev.preventDefault();
+				spaceDownRef.current = true;
+			}
+		};
+		const onKeyUp = (ev: KeyboardEvent) => {
+			if (ev.code === 'Space') {
+				ev.preventDefault();
+				spaceDownRef.current = false;
+			}
+		};
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+		};
+	}, []);
+
+	// Panning (press+drag) like TradingView
+	const isPanningRef = useRef(false);
+	const panStartXRef = useRef(0);
+	const panStartRangeRef = useRef<{ from: number; to: number } | null>(null);
+	const priceHandleDraggingRef = useRef(false);
+	const priceHandleStartYRef = useRef<number>(0);
+	const priceHandleStartMarginsRef = useRef<{ top: number; bottom: number }>({ top: 0.1, bottom: 0.1 });
+
+	// Price handle pointer handlers (defined at component scope so JSX can reference them)
+	const handlePriceHandlePointerDown = (e: React.PointerEvent) => {
+		e.stopPropagation();
+		e.preventDefault();
+		if (!chartRef.current) return;
+		priceHandleDraggingRef.current = true;
+		priceHandleStartYRef.current = e.clientY;
+		priceHandleStartMarginsRef.current = { ...priceScaleMarginsRef.current };
+		try { (e.currentTarget as Element).setPointerCapture((e.nativeEvent as PointerEvent).pointerId); } catch (err) { /* ignore */ }
+	};
+
+	const handlePriceHandlePointerMove = (e: React.PointerEvent) => {
+		if (!priceHandleDraggingRef.current || !chartRef.current) return;
+		const dy = e.clientY - priceHandleStartYRef.current;
+		const delta = -dy * 0.0015;
+		const start = priceHandleStartMarginsRef.current;
+		const top = Math.max(0, Math.min(0.45, start.top + delta));
+		const bottom = Math.max(0, Math.min(0.45, start.bottom - delta));
+		try {
+			chartRef.current.applyOptions({ rightPriceScale: { scaleMargins: { top, bottom } } });
+			priceScaleMarginsRef.current = { top, bottom };
+			const avg = (top + bottom) / 2;
+			const v = Math.max(0, Math.min(1, avg / 0.4));
+			setVerticalStretch(v);
+		} catch (err) { /* ignore */ }
+	};
+
+	const handlePriceHandlePointerUp = (e: React.PointerEvent) => {
+		if (!priceHandleDraggingRef.current) return;
+		priceHandleDraggingRef.current = false;
+		try { (e.currentTarget as Element).releasePointerCapture((e.nativeEvent as PointerEvent).pointerId); } catch (err) { /* ignore */ }
+	};
+	const spaceDownRef = useRef(false);
+	const lastPointerXRef = useRef<number | null>(null);
+	const lastPointerTimeRef = useRef<number | null>(null);
+	const velocityRef = useRef<number>(0);
+	const rafRef = useRef<number | null>(null);
+	const isRulingRef = useRef(false);
+
+	const handlePointerDown = (e: React.PointerEvent) => {
+		// left button only
+		if (e.button !== 0) return;
+		const active = drawingTools.activeTool;
+		// If no drawing tool (or select), start panning. Also allow pan while holding Space.
+		if ((!active || active === 'select') || spaceDownRef.current) {
+			if (!chartRef.current || !chartContainerRef.current) return;
+			isPanningRef.current = true;
+			panStartXRef.current = e.clientX;
+			lastPointerXRef.current = e.clientX;
+			lastPointerTimeRef.current = performance.now();
+			velocityRef.current = 0;
+			try {
+				const timeScale = chartRef.current.timeScale();
+				const vis = timeScale.getVisibleRange() as unknown;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				if (vis && typeof (vis as any).from !== 'undefined' && typeof (vis as any).to !== 'undefined') {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					panStartRangeRef.current = { from: (vis as any).from as number, to: (vis as any).to as number };
+				} else {
+					panStartRangeRef.current = null;
+			}

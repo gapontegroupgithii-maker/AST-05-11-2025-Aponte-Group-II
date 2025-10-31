@@ -1,0 +1,136 @@
+import { Layers, DollarSign, FileText, ChevronLeft, ChevronRight, RefreshCw, Bot } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useEffect, useState } from 'react';
+import { BrokerMarkets, MarketType, fetchAllBrokersMarkets } from '@/lib/marketService';
+
+interface MarketPanelProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  onOpenAI?: () => void;
+}
+
+const MarketPanel = ({ isOpen, onToggle, onOpenAI }: MarketPanelProps) => {
+  const markets = [
+    { id: "options", icon: Layers, label: "Opciones", color: "text-primary" },
+    { id: "derivatives", icon: DollarSign, label: "Derivados", color: "text-bullish" },
+    { id: "lending", icon: FileText, label: "Securities Lending", color: "text-accent" },
+  ];
+
+  const [brokers, setBrokers] = useState<BrokerMarkets[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedMarketType, setSelectedMarketType] = useState<MarketType | null>(null);
+
+  const loadBrokers = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchAllBrokersMarkets();
+      setBrokers(data);
+    } catch (err) {
+      // err could be unknown; stringify conservatively
+      setError(String((err as Error)?.message ?? err ?? 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadBrokers(); }, []);
+
+  // (Preview controls removed) 
+
+  // Overlay: el panel se superpone al chart, no lo empuja ni cambia su tamaño
+  return (
+    <div
+      id="market-panel"
+      className={`fixed top-0 right-0 h-full transition-all duration-300 ${isOpen ? "w-64 z-50 shadow-2xl" : "w-14 z-10"}`}
+      style={{ pointerEvents: 'auto' }}
+    >
+      {/* Toggle Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="absolute -left-3 top-4 z-10 h-8 w-6 rounded-full bg-panel-bg border border-border p-0"
+        onClick={onToggle}
+      >
+        {isOpen ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+      </Button>
+
+  <div className="h-full bg-panel-bg border-l border-border flex flex-col">
+        {isOpen ? (
+          <div className="p-4 overflow-auto h-full">
+            <h3 className="text-sm font-semibold mb-4">Markets</h3>
+
+            {/* AI button and preview controls removed per user request */}
+
+            {!selectedMarketType ? (
+              <div className="text-sm text-muted-foreground">Selecciona un tipo de mercado para ver los mercados disponibles por Broker.</div>
+            ) : (
+              <div className="space-y-3">
+                {brokers.map(b => {
+                  const list = selectedMarketType ? (b.markets[selectedMarketType] ?? []) : [];
+                  return (
+                    <div key={b.id} className="border border-border rounded p-2 bg-background/30">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{b.display}</div>
+                        <div className="text-xs text-muted-foreground">{list.length} markets</div>
+                      </div>
+                      <div className="mt-2 grid gap-1">
+                        {list.map((m) => (
+                          <div key={m} className="text-sm px-2 py-1 rounded hover:bg-secondary/70 cursor-pointer">{m}</div>
+                        ))}
+                        {list.length === 0 && (
+                          <div className="text-xs text-muted-foreground px-2 py-1">No disponible</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="mt-3 flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={() => loadBrokers()}>
+                <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+              </Button>
+              {loading && <div className="text-xs text-muted-foreground">Loading...</div>}
+              {error && <div className="text-xs text-destructive">{error}</div>}
+            </div>
+          </div>
+        ) : (
+          <TooltipProvider>
+            <div className="flex flex-col items-center py-4 gap-3">
+              {markets.map((market) => (
+                <Tooltip key={market.id}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-10 h-10 p-0"
+                      onClick={() => { if (!isOpen) onToggle(); setSelectedMarketType(market.id as MarketType); }}
+                    >
+                      <market.icon className={`w-5 h-5 ${market.color}`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    <p className="text-xs">{market.label}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+        )}
+      </div>
+    </div>
+  );
+};
+
+async function loadBrokers(): Promise<BrokerMarkets[]> {
+  try {
+    return await fetchAllBrokersMarkets();
+  } catch (err) {
+    return [];
+  }
+}
+
+export default MarketPanel;
