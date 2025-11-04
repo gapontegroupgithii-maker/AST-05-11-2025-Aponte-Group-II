@@ -42,22 +42,24 @@ export function makeDefaultEnv() {
   };
   // simple request helper: returns a series for the requested symbol/timeframe
   env.request = {
-    security: (symbol: string, timeframe: string, expr: any) => {
-      // If expr is already a series (evaluated), derive a new synthetic series
-      // for the requested symbol/timeframe by applying a small deterministic
-      // transformation so different symbols yield different series.
-      const base = Array.isArray(expr) ? expr : Array.isArray(env.close) ? env.close : [];
-      // deterministic seed from symbol string
-      let seed = 0;
-      for (let i = 0; i < (symbol || '').length; i++) seed = (seed * 31 + symbol.charCodeAt(i)) >>> 0;
-      const offset = (seed % 100) / 1000; // small offset between 0 and 0.099
-      const newSeries = base.map((v: number, idx: number) => {
-        // add a tiny per-index wiggle so the series isn't identical
-        return (Number(v) || 0) + offset + ((idx % 7) - 3) * 0.001;
-      });
-      return newSeries;
+      security: (symbol: string, timeframe: string, expr: any) => {
+        // Enhance: return a synthetic series derived from symbol+timeframe so different
+        // symbols/timeframes produce different (but deterministic) arrays for tests.
+        const seed = stringHash(String(symbol) + '|' + String(timeframe));
+        // If expr is an explicit array (e.g., close), use it but apply a deterministic offset
+        if (Array.isArray(expr)) {
+          return (expr as number[]).map((v: number, i: number) => v + ((seed % 10) - 5) / 100 + Math.sin(i + seed) / 100);
+        }
+        // fallback: base on env.close
+        return env.close.map((v: number, i: number) => v + ((seed % 10) - 5) / 100 + Math.sin(i + seed) / 100);
+      }
+    };
+
+    function stringHash(s: string) {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i), h |= 0;
+      return Math.abs(h);
     }
-  };
   // Add common TA helpers to the environment
   env.ta = {
     sma: (src: any, len: number) => {
