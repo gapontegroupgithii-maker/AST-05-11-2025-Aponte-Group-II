@@ -40,6 +40,15 @@ export function makeDefaultEnv() {
     high: highSeries,
     low: lowSeries,
   };
+  // simple request helper: returns a series for the requested symbol/timeframe
+  env.request = {
+    security: (symbol: string, timeframe: string, expr: any) => {
+      // In this lightweight runtime we return the current close series as a proxy
+      // for the requested symbol/timeframe. If expr is a primitive/value, return it.
+      if (Array.isArray(expr)) return expr;
+      return env.close;
+    }
+  };
   // Add common TA helpers to the environment
   env.ta = {
     sma: (src: any, len: number) => {
@@ -72,8 +81,18 @@ export function makeDefaultEnv() {
     lowest: (src: any, len: number) => Array.isArray(src) ? Math.min(...src.slice(-(len||1))) : src,
   };
 
+  // strategy stub with simple entry/exit recording
   env.strategy = {
     commission: { percent: 'strategy.commission.percent' },
+    _internal: { entries: [], exits: [] },
+    entry: (id: any, qty?: any) => {
+      env.strategy._internal.entries.push({ id, qty });
+      return null;
+    },
+    exit: (id: any) => {
+      env.strategy._internal.exits.push({ id });
+      return null;
+    }
   };
   return env;
 }
