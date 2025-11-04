@@ -4,70 +4,31 @@
 
 **URL**: https://lovable.dev/projects/4bfaee8e-85be-4f16-8144-c152fb139e4a
 
-## How can I edit this code?
+# All Star Trading — AST (prototype)
 
-There are several ways of editing your application.
+All Star Trading (AST) is a web app prototype that aims to be a TradingView-like platform with support for a Pine Script–compatible language called Star Script (namespace `star.`). This repository contains a phased implementation plan: parser, transpiler, runtime sandbox, editor integrations and eventual IA-assisted translation and optimization.
 
-**Use Lovable**
+Current status summary (short):
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/4bfaee8e-85be-4f16-8144-c152fb139e4a) and start prompting.
+- Parser (hand-written) + Peggy grammar + adapter: present and tested.
+- Runtime: lightweight evaluator and runner with series emulation and basic builtins (plot, input, request.security stub, strategy stubs).
+- Transpiler: scaffold present; needs completion to reach MVP.
+- Tests: vitest suite included and passing locally.
 
-Changes made via Lovable will be committed automatically to this repo.
+See `docs/star-spec.md` for the Star Script contract and mappings.
 
-**Use your preferred IDE**
+Quick start
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```powershell
+npm install
 npm run dev
+npm run test
 ```
 
-**Edit a file directly in GitHub**
+Repository and contribution
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+This repository was prepared to be migrated to `git@github.com:gapontegroupgithii-maker/AST-04-11-2025.git` and includes CI workflows under `.github/workflows/` that run parser generation and tests.
 
-**Use GitHub Codespaces**
+If you plan to contribute, run the tests locally (`npm run test`) before creating a PR.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/4bfaee8e-85be-4f16-8144-c152fb139e4a) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Contact / owner: g.aponte.group.github.ii@gmail.com

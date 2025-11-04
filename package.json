@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/gapontegroupgithii-maker/AST-04-11-2025.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

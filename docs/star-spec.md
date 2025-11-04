@@ -1,3 +1,37 @@
+# Star Script specification (draft)
+
+Namespace: `star.`
+
+Objetivo: definir el subconjunto inicial de Pine Script v5 que Star Script soportará, y el mapeo entre Pine y Star para la fase inicial.
+
+1. Alcance (baseline)
+- Basado en Pine Script v5 subset: expresiones, llamadas a funciones, arrays/historical indexing, assignments, `plot`, `input.*`, `ta.*` (SMA, RSI, highest/lowest), `request.security` (stub), `strategy.*` (stubs).
+
+2. Mapping inicial (reglas simples)
+- Pine `plot(...)` -> `star.plot(...)`
+- `ta.sma(src, len)` -> `star.ta.sma(src, len)` (o `ta.sma` mapeado a `star.ta.sma` por transpiler)
+- `color.rgb(...)` -> `star.color.rgb(...)`
+- `input.int(def, title)` -> `star.input.int(def, { title: '...' })` (support named args)
+- `request.security(symbol, timeframe, expr)` -> `star.request.security(symbol, timeframe, expr)` (runtime provides stub)
+- `strategy.entry(id, qty)` and `strategy.exit(id)` -> `star.strategy.entry(...)` / `star.strategy.exit(...)`
+
+3. Builtins iniciales
+- `star.plot`, `star.input.*`, `star.color.*`, `star.ta.*` (sma, rsi, highest, lowest), `star.request.security`, `star.strategy` (entry/exit), `math.*` helpers.
+
+4. Criterios de aceptación
+- Parser debe generar AST consistente para los ejemplos de prueba en `tests/star-examples/`.
+- Transpiler heurístico (fase 1) debe convertir la mayoría de snippets simples, con tests que cubran `plot`, `ta.*`, `input.*`, `request.security` y `strategy.*`.
+
+5. Scripts de prueba iniciales
+- `tests/star-examples/ma_simple.pine`
+- `tests/star-examples/rsi_example.pine`
+- `tests/star-examples/Test_HL_strategy.pine`
+
+6. Notas de ejecución
+- El runtime actual ejecuta scripts evaluando AST con un env simulado. En fases posteriores el runtime será seguro (Web Worker o transpiler a JS con límites).
+
+7. Futuras extensiones
+- Soporte completo Pine v5, request.security con multi-timeframe, estrategia completa con órdenes simuladas y backtester.
 # Star Script — Especificación inicial (Fase 0)
 
 Última actualización: 2025-10-30
