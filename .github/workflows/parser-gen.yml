@@ -25,6 +25,14 @@ jobs:
           fi
       - name: Run tests
         run: npm run test:ci
+      - name: Generate AST diff report (writes parser-diff.json)
+        run: npx vitest --run tests/parser/ast-diff.report.test.ts
+      - name: Upload parser-diff if present
+        if: ${{ always() && (exists('parser-diff.json')) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parser-diff
+          path: parser-diff.json
       - name: Upload generated parser if present
         # Only upload when the generated parser exists and previous steps succeeded.
         if: ${{ (exists('./src/lib/star-parser/parser.cjs') || exists('./src/lib/star-parser/parser.js')) }}
