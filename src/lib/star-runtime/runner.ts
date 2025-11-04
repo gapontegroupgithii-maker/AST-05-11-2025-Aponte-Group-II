@@ -9,29 +9,69 @@ export type RunResult = {
 
 export function makeDefaultEnv() {
   const plots: any[] = [];
+  // create a small synthetic series for examples (most examples only need a few values)
+  const seriesLen = 200;
+  const closeSeries = Array.from({ length: seriesLen }, (_, i) => 100 + i * 0.5);
+  const highSeries = closeSeries.map(v => v + 1);
+  const lowSeries = closeSeries.map(v => v - 1);
+
   const env: Record<string, any> = {
     math: { avg: (...args: number[]) => args.reduce((s,n) => s+n,0)/args.length },
     color: { rgb: (r:number,g:number,b:number) => `rgb(${r},${g},${b})` },
-    input: { int: (def:number, opts?: any) => def },
+    // input.int can be called as input.int(def, title, "Name") or input.int(def, { title: 'Name' })
+    input: { int: (...args:any[]) => {
+      const def = args[0];
+      // detect named form
+      if (args.length >= 3 && typeof args[1] === 'string') {
+        const name = args[1];
+        const value = args[2];
+        env._inputs = env._inputs || {};
+        env._inputs[name] = value;
+      } else if (args[1] && typeof args[1] === 'object' && args[1].title) {
+        env._inputs = env._inputs || {};
+        env._inputs[args[1].title] = def;
+      }
+      return def;
+    } },
     plot: (...args:any[]) => { plots.push({ callee: 'plot', args }); return null; },
     plots,
-    // simple market variables
-    close: 100,
-    high: 100,
-    low: 100,
+    // series emulation
+    close: closeSeries,
+    high: highSeries,
+    low: lowSeries,
   };
-  // Add common TA and strategy stubs
+  // Add common TA helpers to the environment
   env.ta = {
     sma: (src: any, len: number) => {
-      // naive: return src (since we don't model series); for tests we only need presence
+      if (Array.isArray(src)) {
+        const n = Math.max(1, Math.floor(len) || 1);
+        const slice = src.slice(-n);
+        const sum = slice.reduce((s:number,v:number) => s + (Number(v)||0), 0);
+        return sum / slice.length;
+      }
       return src;
     },
     rsi: (src: any, len: number) => {
-      return src; // placeholder
+      if (!Array.isArray(src)) return 50;
+      const n = Math.max(1, Math.floor(len) || 14);
+      const slice = src.slice(- (n + 1));
+      if (slice.length <= 1) return 50;
+      let gains = 0, losses = 0, count = 0;
+      for (let i = 1; i < slice.length; i++) {
+        const diff = slice[i] - slice[i-1];
+        if (diff > 0) gains += diff; else losses += -diff;
+        count++;
+      }
+      const avgGain = gains / count; const avgLoss = losses / count;
+      if (avgGain + avgLoss === 0) return 50;
+      const rs = avgGain / (avgLoss || 1e-9);
+      const rsi = 100 - (100 / (1 + rs));
+      return rsi;
     },
-    highest: (src: any, len: number) => src,
-    lowest: (src: any, len: number) => src,
+    highest: (src: any, len: number) => Array.isArray(src) ? Math.max(...src.slice(-(len||1))) : src,
+    lowest: (src: any, len: number) => Array.isArray(src) ? Math.min(...src.slice(-(len||1))) : src,
   };
+
   env.strategy = {
     commission: { percent: 'strategy.commission.percent' },
   };
@@ -55,3 +95,4 @@ export function runScript(source: string): RunResult {
 }
 
 export default { runScript, makeDefaultEnv };
+  
