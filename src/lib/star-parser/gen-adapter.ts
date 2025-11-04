@@ -33,7 +33,19 @@ function adaptExpr(e: any): any {
   if (e.type === 'Identifier') return { type: 'Identifier', name: e.name };
   if (e.type === 'Binary') return { type: 'Binary', op: e.op || e.operator || e.name, left: adaptExpr(e.left), right: adaptExpr(e.right) };
   if (e.type === 'Unary') return { type: 'Unary', op: e.op || e.operator || e.name, expr: adaptExpr(e.expr || e.argument) };
-  if (e.type === 'Call') return { type: 'Call', callee: e.callee || e.name, args: (e.args||[]).map((a: any) => (a && a.named ? adaptExpr(a.value) : adaptExpr(a))) };
+  if (e.type === 'Call') {
+    const outArgs: any[] = [];
+    for (const a of (e.args || [])) {
+      if (a && a.named) {
+        // match hand-parser's naive shape: push the name as Identifier then the value
+        outArgs.push({ type: 'Identifier', name: a.name });
+        outArgs.push(adaptExpr(a.value));
+      } else {
+        outArgs.push(adaptExpr(a));
+      }
+    }
+    return { type: 'Call', callee: e.callee || e.name, args: outArgs };
+  }
   if (e.type === 'Array') return { type: 'Array', items: (e.items||[]).map(adaptExpr) };
   if (e.type === 'Index') return { type: 'Index', target: adaptExpr(e.target || e.base || e.object), index: adaptExpr(e.index) };
   return e;
