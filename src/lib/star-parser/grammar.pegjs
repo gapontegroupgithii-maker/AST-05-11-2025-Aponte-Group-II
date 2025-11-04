@@ -23,14 +23,15 @@ Indicator
   = 'indicator' _ '(' _ str:StringLiteral _ ')' { return { type: 'Indicator', raw: text() } }
 
 Assignment
-  = id:Identifier _ '=' _ rhs:Expression _ { return { type: 'Assignment', id, expr: rhs } }
+  = id:Identifier _ '=' _ rhs:Expression _ { return { type: 'Assignment', id: (id && id.name) ? id.name : id, expr: rhs } }
 
 Expression
-  = Call
+  = StringLiteral
+  / Number
   / Array
   / Index
-  / StringLiteral
-  / Number
+  / Call
+  / IdentifierOrPath
   / Identifier
 
 Call
@@ -47,7 +48,7 @@ Array
   = '[' _ elems:ArgumentList? _ ']' { return { type: 'Array', items: elems || [] } }
 
 Index
-  = id:Identifier _ '[' _ idx:Number _ ']' { return { type: 'Index', target: { type: 'Identifier', name: id }, index: { type: 'Number', value: Number(idx) } } }
+  = id:Identifier _ '[' _ idx:Number _ ']' { return { type: 'Index', target: { type: 'Identifier', name: id.name }, index: idx } }
 
 IdentifierOrPath
   = i:Identifier rest:('.' Identifier)* { 
@@ -64,10 +65,15 @@ Number
 
 StringLiteral
   = '"' chars:Char* '"' { return { type: 'String', value: chars.join('') } }
+  / '\'' chars:SqChar* '\'' { return { type: 'String', value: chars.join('') } }
 
 Char
   = '\\' c:. { return c === 'n' ? '\n' : c === 't' ? '\t' : c; }
   / !'"' . { return text(); }
+
+SqChar
+  = '\\' c:. { return c === 'n' ? '\n' : c === 't' ? '\t' : c; }
+  / !"'" . { return text(); }
 
 _ "whitespace"
   = [ \t\n\r]*

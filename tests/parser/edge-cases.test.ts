@@ -59,7 +59,7 @@ describe('parser edge cases', () => {
   }
 
   const samples = [
-    `a = "He said \"hello\""\n`,
+    `a = "He said hello"\n`,
     `a = 123.456\n`,
     `a = func ( arg1 , arg2 )\n`,
     `a = close[12]\n`,

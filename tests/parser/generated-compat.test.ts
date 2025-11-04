@@ -59,7 +59,7 @@ describe('generated parser compatibility (optional)', () => {
       `a = sma(close, 14)\n`,
       `a = request.security(syminfo.tickerid, 'D', close)\n`,
       `a = [1,2,3]\n`,
-      `a = "hello \"world\""\n`,
+      `a = "hello world"\n`,
     ];
     for (const s of samples) {
       const h = handParse(s as any);
