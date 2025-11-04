@@ -11,13 +11,19 @@ Program
     }
 
 LineOrBlank
-  = Line / BlankLine
+  = Line / BlankLine / CommentLine / CommentBlock
 
 Line
-  = Assignment / Call / Indicator
+  = Assignment / Postfix / Indicator
 
 BlankLine
   = _ '\n'
+
+CommentLine
+  = '//' (!'\n' .)* '\n'
+
+CommentBlock
+  = '/*' (!'*/' .)* '*/'
 
 Indicator
   = 'indicator' _ '(' _ str:StringLiteral _ ')' { return { type: 'Indicator', raw: text() } }
@@ -25,28 +31,67 @@ Indicator
 Assignment
   = id:Identifier _ '=' _ rhs:Expression _ { return { type: 'Assignment', id: (id && id.name) ? id.name : id, expr: rhs } }
 
+// Expression with operator precedence
 Expression
-  = StringLiteral
-  / Number
-  / Array
-  / Index
-  / Call
-  / IdentifierOrPath
-  / Identifier
+  = AddSub
 
-Call
-  = callee:IdentifierOrPath _ '(' _ args:ArgumentList? _ ')' {
-    return { type: 'Call', callee, args: args || [] };
+AddSub
+  = left:MulDiv rest:(_ ('+' / '-') _ MulDiv)* {
+    return rest.reduce((acc, r) => ({ type: 'Binary', op: r[1], left: acc, right: r[3] }), left);
   }
+
+MulDiv
+  = left:Pow rest:(_ ('*' / '/') _ Pow)* {
+    return rest.reduce((acc, r) => ({ type: 'Binary', op: r[1], left: acc, right: r[3] }), left);
+  }
+
+Pow
+  = left:Unary rest:(_ '^' _ Pow)? {
+    if (rest && rest.length) return { type: 'Binary', op: '^', left, right: rest[0][3] };
+    return left;
+  }
+
+Unary
+  = op:('-' / '+') _ expr:Unary { return { type: 'Unary', op, expr }; }
+  / Postfix
+
+// Postfix handles chained calls and indexing (e.g., ta.hma(close,12)[2])
+Postfix
+  = head:(IdentifierOrPath / Identifier / StringLiteral / Number / Array / '(' _ Expression _ ')') tail:(_ (IndexSuffix / CallSuffix))* {
+    let node = head;
+    for (const [, part] of tail) {
+      if (part && part.type === 'Index') {
+        node = { type: 'Index', target: (typeof node === 'string' ? { type: 'Identifier', name: node } : node), index: part.index };
+      } else if (part && part.type === 'Call') {
+        // If node is a bare string (IdentifierOrPath), use it as callee name
+        const calleeName = (typeof node === 'string') ? node : (node && node.name) || (node && node.callee) || node;
+        node = { type: 'Call', callee: calleeName, args: part.args };
+      }
+    }
+    return node;
+  }
+
+IndexSuffix
+  = '[' _ idx:Expression _ ']' { return { type: 'Index', index: idx }; }
+
+CallSuffix
+  = '(' _ args:ArgumentList? _ ')' { return { type: 'Call', args: args || [] }; }
 
 ArgumentList
-  = first:Expression rest:(_ ',' _ Expression)* {
+  = first:Argument rest:(_ ',' _ Argument)* {
     return [first].concat(rest.map(r=>r[3]));
   }
+
+Argument
+  = NamedArg / Expression
+
+NamedArg
+  = id:Identifier _ '=' _ expr:Expression { return { named: true, name: id.name, value: expr }; }
 
 Array
   = '[' _ elems:ArgumentList? _ ']' { return { type: 'Array', items: elems || [] } }
 
+// Index handled by Postfix/IndexSuffix; keep legacy Index for compatibility if used elsewhere
 Index
   = id:Identifier _ '[' _ idx:Number _ ']' { return { type: 'Index', target: { type: 'Identifier', name: id.name }, index: idx } }
 
