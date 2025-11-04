@@ -6,7 +6,7 @@ Start
 
 Program
   = _ items:(LineOrBlank _)* {
-      const extracted = items.map(i => i[0]).filter(x => x && x.type === 'Assignment');
+      const extracted = items.map(i => i[0]).filter(x => x && (x.type === 'Assignment' || x.type === 'Call' || x.type === 'Indicator'));
       return { type: 'Program', assignments: extracted };
     }
 

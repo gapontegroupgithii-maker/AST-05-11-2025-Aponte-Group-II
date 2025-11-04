@@ -5,11 +5,26 @@
 export function adaptGeneratedProgram(ast: any): any {
   if (!ast) return ast;
   if (ast.type === 'Program' && Array.isArray(ast.assignments)) {
-    const assignments = ast.assignments.map((a: any) => {
-      const id = a.id || a.name;
-      return { id, expr: adaptExpr(a.expr || a.value) };
-    });
-    return { indicators: ast.indicators || [], assignments };
+    const indicators: any[] = [];
+    const assignments: any[] = [];
+    for (const item of ast.assignments) {
+      if (!item) continue;
+      if (item.type === 'Indicator') {
+        indicators.push(item.raw || item.text || item);
+        continue;
+      }
+      if (item.type === 'Assignment') {
+        const id = item.id || item.name;
+        assignments.push({ id, expr: adaptExpr(item.expr || item.value) });
+        continue;
+      }
+      if (item.type === 'Call') {
+        // represent bare calls as assignments with id '_call'
+        assignments.push({ id: '_call', expr: adaptExpr(item) });
+        continue;
+      }
+    }
+    return { indicators, assignments };
   }
   return ast;
 }
