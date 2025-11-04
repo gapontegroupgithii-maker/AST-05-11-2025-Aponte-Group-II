@@ -71,7 +71,9 @@ describe('parser binary precedence', () => {
       try { gRaw = genParse(s as any); } catch (err) { throw err; }
       let g = gRaw;
       try { const { adaptGeneratedProgram } = await import('../../src/lib/star-parser/gen-adapter'); g = adaptGeneratedProgram(gRaw); } catch (e) {}
-      expect(canonicalize(normalize(h))).toEqual(canonicalize(normalize(g)));
+      const H = canonicalize(normalize(h));
+      const G = canonicalize(normalize(g));
+      expect(H).toEqual(G);
     });
   });
 });
