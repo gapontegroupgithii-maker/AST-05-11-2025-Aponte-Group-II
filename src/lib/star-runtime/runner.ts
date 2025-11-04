@@ -20,6 +20,21 @@ export function makeDefaultEnv() {
     high: 100,
     low: 100,
   };
+  // Add common TA and strategy stubs
+  env.ta = {
+    sma: (src: any, len: number) => {
+      // naive: return src (since we don't model series); for tests we only need presence
+      return src;
+    },
+    rsi: (src: any, len: number) => {
+      return src; // placeholder
+    },
+    highest: (src: any, len: number) => src,
+    lowest: (src: any, len: number) => src,
+  };
+  env.strategy = {
+    commission: { percent: 'strategy.commission.percent' },
+  };
   return env;
 }
 
