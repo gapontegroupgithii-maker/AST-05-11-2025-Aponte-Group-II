@@ -154,13 +154,14 @@ export function makeDefaultEnv() {
   return env;
 }
 
-export function runScript(source: string): RunResult {
+export function runScript(source: string, options?: { opLimit?: number }): RunResult {
   const prog = parse(source);
   const env = makeDefaultEnv();
+  if (options?.opLimit) env._opLimit = options.opLimit;
   const indicators = prog.indicators || [];
   for (const a of prog.assignments || []) {
     const id = a.id;
-    const val = evaluate(a.expr, env as any);
+    const val = evaluate(a.expr, env as unknown as any);
     if (id === '_call') {
       // calls like plot(...) have already pushed to env.plots via plot stub
       continue;

@@ -16,6 +16,12 @@ function resolvePath(env: RuntimeEnv, path: string) {
 }
 
 export function evaluate(node: any, env: RuntimeEnv = {}): any {
+  // simple operation budget guard
+  env._opCount = env._opCount || 0;
+  const opLimit = env._opLimit || 1000000;
+  env._opCount += 1;
+  if (env._opCount > opLimit) throw new Error(`Runtime exceeded operation limit (${opLimit})`);
+
   if (node == null) return node;
   switch (node.type) {
     case 'Number':
