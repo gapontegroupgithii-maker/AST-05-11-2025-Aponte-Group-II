@@ -43,10 +43,19 @@ export function makeDefaultEnv() {
   // simple request helper: returns a series for the requested symbol/timeframe
   env.request = {
     security: (symbol: string, timeframe: string, expr: any) => {
-      // In this lightweight runtime we return the current close series as a proxy
-      // for the requested symbol/timeframe. If expr is a primitive/value, return it.
-      if (Array.isArray(expr)) return expr;
-      return env.close;
+      // If expr is already a series (evaluated), derive a new synthetic series
+      // for the requested symbol/timeframe by applying a small deterministic
+      // transformation so different symbols yield different series.
+      const base = Array.isArray(expr) ? expr : Array.isArray(env.close) ? env.close : [];
+      // deterministic seed from symbol string
+      let seed = 0;
+      for (let i = 0; i < (symbol || '').length; i++) seed = (seed * 31 + symbol.charCodeAt(i)) >>> 0;
+      const offset = (seed % 100) / 1000; // small offset between 0 and 0.099
+      const newSeries = base.map((v: number, idx: number) => {
+        // add a tiny per-index wiggle so the series isn't identical
+        return (Number(v) || 0) + offset + ((idx % 7) - 3) * 0.001;
+      });
+      return newSeries;
     }
   };
   // Add common TA helpers to the environment
@@ -81,18 +90,26 @@ export function makeDefaultEnv() {
     lowest: (src: any, len: number) => Array.isArray(src) ? Math.min(...src.slice(-(len||1))) : src,
   };
 
-  // strategy stub with simple entry/exit recording
+  // strategy stub with simple entry/exit recording and lightweight position tracking
   env.strategy = {
     commission: { percent: 'strategy.commission.percent' },
-    _internal: { entries: [], exits: [] },
-    entry: (id: any, qty?: any) => {
+    _internal: { entries: [], exits: [], position: { size: 0, avg: 0 } },
+    entry: (id: any, qty?: number) => {
       env.strategy._internal.entries.push({ id, qty });
+      const price = Array.isArray(env.close) ? env.close[env.close.length - 1] : 0;
+      const q = Number(qty) || 1;
+      const pos = env.strategy._internal.position;
+      const newSize = pos.size + q;
+      const newAvg = ((pos.avg * pos.size) + price * q) / (newSize || 1);
+      env.strategy._internal.position = { size: newSize, avg: newAvg };
       return null;
     },
     exit: (id: any) => {
       env.strategy._internal.exits.push({ id });
+      env.strategy._internal.position = { size: 0, avg: 0 };
       return null;
-    }
+    },
+    position: () => env.strategy._internal.position
   };
   return env;
 }

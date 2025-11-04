@@ -9,8 +9,33 @@ export function adaptGeneratedProgram(ast: any): any {
     const assignments: any[] = [];
     for (const item of ast.assignments) {
       if (!item) continue;
+      // Some generated parsers may represent top-level indicator/strategy
+      // declarations as Calls (callee === 'indicator' or 'strategy').
+      // Treat those as indicators (string lines) to match the hand-parser
+      // which stored them as raw lines.
       if (item.type === 'Indicator') {
         indicators.push(item.raw || item.text || item);
+        continue;
+      }
+  if (item.type === 'Call' && item.callee === 'indicator') {
+        // Reconstruct a simple source-like representation for the indicator call.
+        function argToText(a: any): string {
+          if (a == null) return '';
+          if (Array.isArray(a)) return a.map(argToText).join(', ');
+          if (typeof a === 'number') return String(a);
+          if (typeof a === 'string') return a;
+          // handle named arg shapes
+          if (a.name && (a.value !== undefined)) return `${a.name}=${argToText(a.value)}`;
+          if (a.named && a.name && a.value) return `${a.name}=${argToText(a.value)}`;
+          if (a.type === 'Number') return String(a.value);
+          if (a.type === 'String') return JSON.stringify(a.value);
+          if (a.type === 'Identifier') return a.name;
+          if (a.type === 'Call') return `${a.callee}(${(a.args||[]).map(argToText).join(', ')})`;
+          if (a.type === 'Index') return `${argToText(a.target)}[${argToText(a.index)}]`;
+          return String(a);
+        }
+        const text = `${item.callee}(${(item.args||[]).map(argToText).join(', ')})`;
+        indicators.push(text);
         continue;
       }
       if (item.type === 'Assignment') {
