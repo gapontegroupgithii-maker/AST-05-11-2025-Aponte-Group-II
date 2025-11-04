@@ -1,0 +1,44 @@
+name: Parser generation + tests (optional)
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  generate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Try generate parser (peggy)
+        run: |
+          if [ -f ./src/lib/star-parser/grammar.pegjs ]; then
+            npx peggy -o src/lib/star-parser/parser.cjs src/lib/star-parser/grammar.pegjs
+            echo "Generated parser.cjs"
+          else
+            echo "No grammar.pegjs present — skipping generation"
+          fi
+      - name: Run tests
+        run: npm run test:ci
+      - name: Generate AST diff report (writes parser-diff.json)
+        run: npx vitest --run tests/parser/ast-diff.report.test.ts
+      - name: Upload parser-diff if present
+        if: ${{ always() && (exists('parser-diff.json')) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parser-diff
+          path: parser-diff.json
+      - name: Upload generated parser if present
+        # Only upload when the generated parser exists and previous steps succeeded.
+        if: ${{ (exists('./src/lib/star-parser/parser.cjs') || exists('./src/lib/star-parser/parser.js')) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-parser
+          path: |
+            src/lib/star-parser/parser.cjs
+            src/lib/star-parser/parser.js
