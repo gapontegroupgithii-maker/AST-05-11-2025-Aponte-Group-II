@@ -26,7 +26,8 @@ jobs:
       - name: Run tests
         run: npm run test:ci
       - name: Upload generated parser if present
-        if: ${{ always() && (exists('./src/lib/star-parser/parser.cjs') || exists('./src/lib/star-parser/parser.js')) }}
+        # Only upload when the generated parser exists and previous steps succeeded.
+        if: ${{ (exists('./src/lib/star-parser/parser.cjs') || exists('./src/lib/star-parser/parser.js')) }}
         uses: actions/upload-artifact@v4
         with:
           name: generated-parser
