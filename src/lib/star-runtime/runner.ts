@@ -33,7 +33,17 @@ export function makeDefaultEnv() {
       }
       return def;
     } },
-    plot: (...args:any[]) => { plots.push({ callee: 'plot', args }); return null; },
+    plot: (...args:any[]) => {
+      // support plot(series, title) or plot(series, { title, color })
+      let series = args[0];
+      let opts: any = {};
+      if (args.length >= 2) {
+        if (typeof args[1] === 'string') opts.title = args[1];
+        else if (typeof args[1] === 'object') opts = { ...args[1] };
+      }
+      plots.push({ callee: 'plot', series, options: opts, rawArgs: args });
+      return null;
+    },
     plots,
     // series emulation
     close: closeSeries,
@@ -91,27 +101,55 @@ export function makeDefaultEnv() {
     highest: (src: any, len: number) => Array.isArray(src) ? Math.max(...src.slice(-(len||1))) : src,
     lowest: (src: any, len: number) => Array.isArray(src) ? Math.min(...src.slice(-(len||1))) : src,
   };
-
   // strategy stub with simple entry/exit recording and lightweight position tracking
   env.strategy = {
     commission: { percent: 'strategy.commission.percent' },
-    _internal: { entries: [], exits: [], position: { size: 0, avg: 0 } },
+    _internal: { entries: [], exits: [], position: { size: 0, avg: 0 }, orders: [], trades: [] },
     entry: (id: any, qty?: number) => {
       env.strategy._internal.entries.push({ id, qty });
-      const price = Array.isArray(env.close) ? env.close[env.close.length - 1] : 0;
-      const q = Number(qty) || 1;
-      const pos = env.strategy._internal.position;
-      const newSize = pos.size + q;
-      const newAvg = ((pos.avg * pos.size) + price * q) / (newSize || 1);
-      env.strategy._internal.position = { size: newSize, avg: newAvg };
+      // use order to fill
+      env.strategy.order(id, 'buy', qty);
       return null;
     },
     exit: (id: any) => {
       env.strategy._internal.exits.push({ id });
-      env.strategy._internal.position = { size: 0, avg: 0 };
+      // close entire position for this id
+      const pos = env.strategy._internal.position;
+      if (pos.size > 0) env.strategy.order(id, 'sell', pos.size);
       return null;
     },
-    position: () => env.strategy._internal.position
+    // immediate-market order simulation: fills at last close price
+    order: (id: any, action: string, qty?: number) => {
+      const price = Array.isArray(env.close) ? env.close[env.close.length - 1] : 0;
+      const q = Math.max(0, Number(qty) || 1);
+      env.strategy._internal.orders = env.strategy._internal.orders || [];
+      const entry = { id, action, qty: q, price, time: Date.now() };
+      env.strategy._internal.orders.push(entry);
+      // simple fill logic
+      const pos = env.strategy._internal.position;
+      if (action === 'buy' || action === 'long') {
+        const newSize = pos.size + q;
+        const newAvg = ((pos.avg * pos.size) + price * q) / (newSize || 1);
+        env.strategy._internal.position = { size: newSize, avg: newAvg };
+        env.strategy._internal.trades = env.strategy._internal.trades || [];
+        env.strategy._internal.trades.push({ side: 'buy', qty: q, price, id });
+      } else if (action === 'sell' || action === 'close' || action === 'short') {
+        const sellQty = Math.min(q, pos.size);
+        const remaining = Math.max(0, pos.size - sellQty);
+        env.strategy._internal.trades = env.strategy._internal.trades || [];
+        env.strategy._internal.trades.push({ side: 'sell', qty: sellQty, price, id });
+        if (remaining === 0) env.strategy._internal.position = { size: 0, avg: 0 };
+        else env.strategy._internal.position = { size: remaining, avg: pos.avg };
+      }
+      return entry;
+    },
+    position: () => env.strategy._internal.position,
+    // compute unrealized PnL (current close vs avg * size)
+    pnl: () => {
+      const pos = env.strategy._internal.position || { size: 0, avg: 0 };
+      const price = Array.isArray(env.close) ? env.close[env.close.length - 1] : 0;
+      return (price - (pos.avg || 0)) * (pos.size || 0);
+    }
   };
   return env;
 }
