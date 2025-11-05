@@ -1,3 +1,8 @@
+# CODEOWNERS for the AST project
+# This file assigns default reviewers for changes. Adjust as needed.
+
+# All files -> owner
+*    @gapontegroupgith-cmd
 # Code owners for the AST repository
 # Require reviews from the repo owner for changes on critical paths
 * @gapontegroupgithii-maker

@@ -7,6 +7,10 @@
     "type": "git",
     "url": "git+ssh://git@github.com/gapontegroupgithii-maker/AST-04-11-2025.git"
   },
+  "description": "AST — Star Script transpiler and runtime (Pine v5 compatibility prototype)",
+  "author": "gapontegroupgith-cmd",
+  "license": "MIT",
+  "main": "src/lib/star-runtime/runner.ts",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -14,6 +18,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test": "vitest",
+  "transpile": "node ./bin/transpile.js",
     "test:ci": "npm run build:parser && vitest --run",
     "preview": "vite preview"
   },
@@ -70,7 +75,10 @@
     "zod": "^3.25.76",
     "zustand": "^5.0.8"
   },
-  "devDependencies": {
+    "bin": {
+    "transpile": "bin/transpile.js"
+  },
+    "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^22.16.5",

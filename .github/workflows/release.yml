@@ -1,0 +1,36 @@
+name: Release (package)
+
+on:
+  workflow_dispatch: {}
+  release:
+    types: [created]
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build parser (if grammar present)
+        run: |
+          if [ -f ./src/lib/star-parser/grammar.pegjs ]; then
+            npx peggy -o src/lib/star-parser/parser.cjs src/lib/star-parser/grammar.pegjs
+          fi
+      - name: Run tests
+        run: npm run test:ci
+      - name: Create release artifact
+        run: |
+          mkdir -p release
+          TAR=release/ast-package-$(date +%Y%m%d%H%M%S).tar.gz
+          tar -czf "$TAR" .
+          echo "artifact=$TAR" > artifact.txt
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ast-release
+          path: release/

@@ -103,7 +103,9 @@ export function makeDefaultEnv() {
   };
   // strategy stub with simple entry/exit recording and lightweight position tracking
   env.strategy = {
-    commission: { percent: 'strategy.commission.percent' },
+  // commission.percent can be a number (fraction, e.g. 0.001) or a path in env
+  commission: { percent: 0.0 },
+  _internal: { entries: [], exits: [], position: { size: 0, avg: 0 }, orders: [], trades: [], realizedPnL: 0 },
     _internal: { entries: [], exits: [], position: { size: 0, avg: 0 }, orders: [], trades: [] },
     entry: (id: any, qty?: number) => {
       env.strategy._internal.entries.push({ id, qty });
@@ -119,25 +121,51 @@ export function makeDefaultEnv() {
       return null;
     },
     // immediate-market order simulation: fills at last close price
-    order: (id: any, action: string, qty?: number) => {
+    // order supports optional opts: { slippage: 0.001, fillPercent: 0.5 }
+    order: function(id: any, action: string, qty?: number, opts?: any) {
+      // support both object opts and named-arg form where args are: ..., 'name', value
+      // capture any extra args from arguments to detect name/value pairs
+      const extra: any[] = Array.prototype.slice.call(arguments, 3);
+      // Normalize opts: prefer an object and merge named-arg pairs from extra
+      let localOpts: Record<string, any> = (opts && typeof opts === 'object') ? opts : {};
+      if (extra && extra.length >= 2) {
+        for (let i = 0; i < extra.length; i += 2) {
+          const k = extra[i];
+          const v = extra[i + 1];
+          if (typeof k === 'string') localOpts[k] = v;
+        }
+      }
       const price = Array.isArray(env.close) ? env.close[env.close.length - 1] : 0;
-      const q = Math.max(0, Number(qty) || 1);
+      const requested = Math.max(0, Number(qty) || 1);
+  const fillPercent = (localOpts && typeof localOpts.fillPercent === 'number') ? Math.max(0, Math.min(1, localOpts.fillPercent)) : 1;
+  const filledQty = Math.max(0, Math.floor(requested * fillPercent));
+  const slippage = (localOpts && typeof localOpts.slippage === 'number') ? Number(localOpts.slippage) : 0;
+      // adjust price according to action and slippage
+      const adjPrice = (action === 'buy' || action === 'long') ? price * (1 + slippage) : price * (1 - slippage);
       env.strategy._internal.orders = env.strategy._internal.orders || [];
-      const entry = { id, action, qty: q, price, time: Date.now() };
+      const entry = { id, action, requestedQty: requested, qty: filledQty, price: adjPrice, slippage, time: Date.now() };
       env.strategy._internal.orders.push(entry);
-      // simple fill logic
+      // fill logic with partial-fill support
       const pos = env.strategy._internal.position;
-      if (action === 'buy' || action === 'long') {
-        const newSize = pos.size + q;
-        const newAvg = ((pos.avg * pos.size) + price * q) / (newSize || 1);
-        env.strategy._internal.position = { size: newSize, avg: newAvg };
-        env.strategy._internal.trades = env.strategy._internal.trades || [];
-        env.strategy._internal.trades.push({ side: 'buy', qty: q, price, id });
-      } else if (action === 'sell' || action === 'close' || action === 'short') {
-        const sellQty = Math.min(q, pos.size);
+      env.strategy._internal.trades = env.strategy._internal.trades || [];
+      if ((action === 'buy' || action === 'long') && filledQty > 0) {
+  // apply commission as cost on buy
+  const commissionPct = (env.strategy && env.strategy.commission && typeof env.strategy.commission.percent === 'number') ? env.strategy.commission.percent : 0;
+  const commissionCost = adjPrice * filledQty * commissionPct;
+  const newSize = pos.size + filledQty;
+  // incorporate commission into average price (approximate)
+  const newAvg = ((pos.avg * pos.size) + (adjPrice * filledQty) + commissionCost) / (newSize || 1);
+  env.strategy._internal.position = { size: newSize, avg: newAvg };
+  env.strategy._internal.trades.push({ side: 'buy', qty: filledQty, price: adjPrice, id, requested: requested, commission: commissionCost });
+      } else if ((action === 'sell' || action === 'close' || action === 'short') && filledQty > 0) {
+        const sellQty = Math.min(filledQty, pos.size);
         const remaining = Math.max(0, pos.size - sellQty);
-        env.strategy._internal.trades = env.strategy._internal.trades || [];
-        env.strategy._internal.trades.push({ side: 'sell', qty: sellQty, price, id });
+  // realized PnL: (sellPrice - avg) * qty - commission
+  const commissionPct = (env.strategy && env.strategy.commission && typeof env.strategy.commission.percent === 'number') ? env.strategy.commission.percent : 0;
+  const commissionCost = adjPrice * sellQty * commissionPct;
+  const pnl = ((adjPrice - pos.avg) * sellQty) - commissionCost;
+  env.strategy._internal.realizedPnL = (env.strategy._internal.realizedPnL || 0) + pnl;
+  env.strategy._internal.trades.push({ side: 'sell', qty: sellQty, price: adjPrice, id, requested: requested, commission: commissionCost, pnl });
         if (remaining === 0) env.strategy._internal.position = { size: 0, avg: 0 };
         else env.strategy._internal.position = { size: remaining, avg: pos.avg };
       }
@@ -145,10 +173,13 @@ export function makeDefaultEnv() {
     },
     position: () => env.strategy._internal.position,
     // compute unrealized PnL (current close vs avg * size)
+    // compute total PnL (realized + unrealized)
     pnl: () => {
       const pos = env.strategy._internal.position || { size: 0, avg: 0 };
       const price = Array.isArray(env.close) ? env.close[env.close.length - 1] : 0;
-      return (price - (pos.avg || 0)) * (pos.size || 0);
+      const unreal = (price - (pos.avg || 0)) * (pos.size || 0);
+      const realized = env.strategy._internal.realizedPnL || 0;
+      return realized + unreal;
     }
   };
   return env;
