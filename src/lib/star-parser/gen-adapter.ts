@@ -2,11 +2,11 @@
 // shaped AST used by the codebase. This allows generated parsers to be
 // compared/used without forcing exact internal shapes to match.
 
-export function adaptGeneratedProgram(ast: any): any {
+export function adaptGeneratedProgram(ast: unknown): unknown {
   if (!ast) return ast;
   if (ast.type === 'Program' && Array.isArray(ast.assignments)) {
-    const indicators: any[] = [];
-    const assignments: any[] = [];
+    const indicators: unknown[] = [];
+    const assignments: unknown[] = [];
     for (const item of ast.assignments) {
       if (!item) continue;
       // Some generated parsers may represent top-level indicator/strategy
@@ -19,7 +19,7 @@ export function adaptGeneratedProgram(ast: any): any {
       }
   if (item.type === 'Call' && item.callee === 'indicator') {
         // Reconstruct a simple source-like representation for the indicator call.
-        function argToText(a: any): string {
+        function argToText(a: unknown): string {
           if (a == null) return '';
           if (Array.isArray(a)) return a.map(argToText).join(', ');
           if (typeof a === 'number') return String(a);
@@ -54,7 +54,7 @@ export function adaptGeneratedProgram(ast: any): any {
   return ast;
 }
 
-function adaptExpr(e: any): any {
+function adaptExpr(e: unknown): unknown {
   if (e == null) return e;
   // unwrap array wrappers produced by the generated parser (groups/sequence)
   if (Array.isArray(e)) {
@@ -63,7 +63,7 @@ function adaptExpr(e: any): any {
       if (el && typeof el === 'object' && (el.type || el.callee || el.name)) return adaptExpr(el);
     }
     // fallback: join string parts into identifier-like
-    const parts = e.filter((x: any) => typeof x === 'string').join('');
+    const parts = e.filter((x: unknown) => typeof x === 'string').join('');
     return parts ? { type: 'Identifier', name: parts } : e;
   }
   if (typeof e === 'number') return { type: 'Number', value: e };
@@ -74,7 +74,7 @@ function adaptExpr(e: any): any {
   if (e.type === 'Binary') return { type: 'Binary', op: e.op || e.operator || e.name, left: adaptExpr(e.left), right: adaptExpr(e.right) };
   if (e.type === 'Unary') return { type: 'Unary', op: e.op || e.operator || e.name, expr: adaptExpr(e.expr || e.argument) };
   if (e.type === 'Call') {
-    const outArgs: any[] = [];
+    const outArgs: unknown[] = [];
     for (const a of (e.args || [])) {
       if (a && a.named) {
         // match hand-parser's naive shape: push the name as Identifier then the value

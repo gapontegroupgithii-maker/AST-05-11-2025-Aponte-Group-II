@@ -15,7 +15,7 @@ describe('star-runtime evaluate', () => {
       color: {
         rgb: (r:number,g:number,b:number) => `rgb(${r},${g},${b})`
       }
-    } as any;
+    } as unknown;
 
     const avgCall = { type: 'Call', callee: 'math.avg', args: [ { type: 'Number', value: 1 }, { type: 'Number', value: 3 }, { type: 'Number', value: 5 } ] };
     expect(evaluate(avgCall, env)).toBe(3);
@@ -25,7 +25,7 @@ describe('star-runtime evaluate', () => {
   });
 
   it('resolves identifiers from env and booleans', () => {
-    const env = { foo: 42 } as any;
+    const env = { foo: 42 } as unknown;
     expect(evaluate({ type: 'Identifier', name: 'foo' }, env)).toBe(42);
     expect(evaluate({ type: 'Identifier', name: 'true' }, env)).toBe(true);
   });

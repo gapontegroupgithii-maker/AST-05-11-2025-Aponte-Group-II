@@ -136,7 +136,7 @@ const Index = () => {
               try {
                 const raw = window.localStorage.getItem('star_script_indicators');
                 const indicators = raw ? JSON.parse(raw) : [];
-                const updated = indicators.map((i: any) =>
+                const updated = indicators.map((i: unknown) =>
                   i.id === starScriptEditId ? { ...i, params: { params: content } } : i
                 );
                 window.localStorage.setItem('star_script_indicators', JSON.stringify(updated));

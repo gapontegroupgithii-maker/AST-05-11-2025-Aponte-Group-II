@@ -4,8 +4,8 @@ import path from 'path'
 import { createRequire } from 'module'
 import { parse as handParse } from '../../src/lib/star-parser'
 
-function normalize(o: any) { return JSON.parse(JSON.stringify(o, (k,v)=>{ if (k==='loc'||k==='location'||k==='start'||k==='end') return undefined; return v })) }
-function normalizeExpr(e: any): any {
+function normalize(o: unknown) { return JSON.parse(JSON.stringify(o, (k,v)=>{ if (k==='loc'||k==='location'||k==='start'||k==='end') return undefined; return v })) }
+function normalizeExpr(e: unknown): unknown {
   if (e == null) return e;
   if (typeof e === 'number') return { type: 'Number', value: e };
   if (e.type === 'Number') return { type: 'Number', value: e.value };
@@ -19,14 +19,14 @@ function normalizeExpr(e: any): any {
   if (e.type === 'Unary') return { type: 'Unary', op: e.op, expr: normalizeExpr(e.expr) };
   return e;
 }
-function canonicalize(ast: any): any {
+function canonicalize(ast: unknown): unknown {
   if (!ast) return ast;
   if (ast.type === 'Program' && Array.isArray(ast.assignments)) {
-    const assignments = ast.assignments.map((a: any) => ({ id: a.id || a.name, expr: normalizeExpr(a.expr || a.value) }));
+    const assignments = ast.assignments.map((a: unknown) => ({ id: a.id || a.name, expr: normalizeExpr(a.expr || a.value) }));
     return { indicators: ast.indicators || [], assignments };
   }
   if (Array.isArray(ast.assignments)) {
-    return { indicators: ast.indicators || [], assignments: ast.assignments.map((a: any) => ({ id: a.id, expr: normalizeExpr(a.expr) })) };
+    return { indicators: ast.indicators || [], assignments: ast.assignments.map((a: unknown) => ({ id: a.id, expr: normalizeExpr(a.expr) })) };
   }
   return ast;
 }
@@ -37,7 +37,7 @@ async function loadGenParse() {
     path.resolve(__dirname, '../../src/lib/star-parser/parser.js'),
   ];
   const genPath = candidates.find(p => fs.existsSync(p));
-  if (!genPath) return undefined as any;
+  if (!genPath) return undefined as unknown;
   if (genPath.endsWith('.cjs')) {
     const req = createRequire(import.meta.url);
     const g = req(genPath);
@@ -63,15 +63,15 @@ it('generate AST diff report for parser samples and write parser-diff.json', asy
     for (const f of files) samples.push(fs.readFileSync(path.join(examplesDir, f), 'utf8'));
   }
 
-  const mismatches: any[] = [];
+  const mismatches: unknown[] = [];
   for (const s of samples) {
-    const h = handParse(s as any);
+    const h = handParse(s as unknown);
     if (!genParse) {
       // if no generated parser, skip (this test should not fail CI in that case)
       continue;
     }
-    let gRaw: any;
-    try { gRaw = genParse(s as any); } catch (err: any) { mismatches.push({ sample: s, error: (err && err.message) || String(err) }); continue; }
+    let gRaw: unknown;
+    try { gRaw = genParse(s as unknown); } catch (err: unknown) { mismatches.push({ sample: s, error: (err && err.message) || String(err) }); continue; }
     let g = gRaw;
     try { const { adaptGeneratedProgram } = await import('../../src/lib/star-parser/gen-adapter'); g = adaptGeneratedProgram(gRaw); } catch (e) {}
     const H = canonicalize(normalize(h));

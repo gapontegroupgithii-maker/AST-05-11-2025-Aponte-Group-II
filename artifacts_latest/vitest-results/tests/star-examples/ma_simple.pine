@@ -1,0 +1,7 @@
+// MA simple - ejemplo para tests
+//@version=5
+indicator("MA Simple", overlay=true)
+len = input.int(14, title="Length")
+src = close
+sma_v = ta.sma(src, len)
+plot(sma_v, title="SMA")

@@ -3,11 +3,11 @@
 // produced by the parser (Number, String, Identifier, Binary, Unary, Call,
 // Array, Index). This is intentionally small — only core helpers are included.
 
-export type RuntimeEnv = Record<string, any>;
+export type RuntimeEnv = Record<string, unknown>;
 
 function resolvePath(env: RuntimeEnv, path: string) {
   const parts = path.split('.');
-  let cur: any = env;
+  let cur: unknown = env;
   for (const p of parts) {
     if (cur == null) return undefined;
     cur = cur[p];
@@ -15,7 +15,7 @@ function resolvePath(env: RuntimeEnv, path: string) {
   return cur;
 }
 
-export function evaluate(node: any, env: RuntimeEnv = {}): any {
+export function evaluate(node: unknown, env: RuntimeEnv = {}): unknown {
   // simple operation budget guard
   env._opCount = env._opCount || 0;
   const opLimit = env._opLimit || 1000000;
@@ -59,13 +59,13 @@ export function evaluate(node: any, env: RuntimeEnv = {}): any {
     case 'Call': {
       const callee = typeof node.callee === 'string' ? node.callee : (node.callee?.name || node.callee);
       const fn = resolvePath(env, callee);
-      const args = (node.args || []).map((a: any) => evaluate(a, env));
+      const args = (node.args || []).map((a: unknown) => evaluate(a, env));
       if (typeof fn === 'function') return fn(...args);
       // fallback: return representation
       return { callee, args };
     }
     case 'Array':
-      return (node.items || []).map((i: any) => evaluate(i, env));
+      return (node.items || []).map((i: unknown) => evaluate(i, env));
     case 'Index': {
       const target = evaluate(node.target, env);
       const idx = evaluate(node.index, env);

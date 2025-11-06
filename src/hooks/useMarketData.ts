@@ -234,7 +234,7 @@ export const useMarketData = (symbol: string, timeframe: string, limit = DEFAULT
     } catch (err: unknown) {
       // Ignore AbortError noise when caller aborts the signal intentionally
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((err as any)?.name === 'AbortError') {
+      if ((err as unknown)?.name === 'AbortError') {
         return [] as OHLCV[];
       }
       console.warn('[useMarketData] fetchKlines error', err);

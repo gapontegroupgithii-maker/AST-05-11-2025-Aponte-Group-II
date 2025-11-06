@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 222 15% 12%;
+    --foreground: 210 40% 98%;
+    
+    --card: 222 18% 14%;
+    --card-foreground: 210 40% 98%;
+    
+    --popover: 222 20% 16%;
+    --popover-foreground: 210 40% 98%;
+    
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 15% 12%;
+    
+    --secondary: 222 16% 18%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 222 16% 18%;
+    --muted-foreground: 215 20% 65%;
+    
+    --accent: 217 91% 60%;
+    --accent-foreground: 222 15% 12%;
+    
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 222 16% 22%;
+    --input: 222 16% 22%;
+    --ring: 217 91% 60%;
+    
+    --radius: 0.375rem;
+    
+    --bullish: 142 76% 36%;
+    --bearish: 0 72% 51%;
+    --chart-bg: 222 15% 10%;
+    --panel-bg: 222 18% 14%;
+    --toolbar-bg: 222 20% 16%;
+  --icon-color: 222 15% 98%;
+  --bullish-body: 142 76% 36%;
+  --bearish-body: 0 72% 51%;
+  --bullish-wick: 142 76% 30%;
+  --bearish-wick: 0 72% 45%;
+    
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Icon color variable: SVGs inherit this color (allows user theming) */
+  svg {
+    color: hsl(var(--icon-color));
+  }
+
+  /* Button and focus states should use the accent/primary variables for consistent theming */
+  button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 4px hsl(var(--ring) / 0.18);
+  }
+
+  /* Make button hover/active slightly adjust brightness of the primary color */
+  .bg-primary:hover, .bg-accent:hover {
+    filter: brightness(0.95);
+  }
+  .bg-primary:active, .bg-accent:active {
+    filter: brightness(0.9);
+  }
+
+  /* Ensure ghost buttons (hover background) get a faint accent tint */
+  .hover\:bg-accent:hover {
+    background-color: hsl(var(--accent) / 0.06) !important;
+  }
+}

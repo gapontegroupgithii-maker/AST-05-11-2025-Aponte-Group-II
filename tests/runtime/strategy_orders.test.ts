@@ -22,6 +22,6 @@ strategy.exit("long1")
 `;
     const res = runScript(src);
     expect(res.env.strategy._internal.position.size).toBe(0);
-    expect(res.env.strategy._internal.trades.some((t:any)=>t.side==='sell')).toBeTruthy();
+    expect(res.env.strategy._internal.trades.some((t: unknown)=>t.side==='sell')).toBeTruthy();
   });
 });

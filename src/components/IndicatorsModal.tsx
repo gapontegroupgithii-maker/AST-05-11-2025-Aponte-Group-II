@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 interface Indicator {
   id: string;
   name: string;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
 }
 
 interface IndicatorsModalProps {

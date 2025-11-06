@@ -4,21 +4,21 @@ import path from 'path'
 import { createRequire } from 'module'
 import { parse as handParse } from '../../src/lib/star-parser'
 
-function normalize(o: any) { return JSON.parse(JSON.stringify(o, (k,v)=>{ if (k==='loc'||k==='location'||k==='start'||k==='end') return undefined; return v })) }
+function normalize(o: unknown) { return JSON.parse(JSON.stringify(o, (k,v)=>{ if (k==='loc'||k==='location'||k==='start'||k==='end') return undefined; return v })) }
 
-function canonicalize(ast: any): any {
+function canonicalize(ast: unknown): unknown {
   if (!ast) return ast;
   if (ast.type === 'Program' && Array.isArray(ast.assignments)) {
-    const assignments = ast.assignments.map((a: any) => ({ id: a.id || a.name, expr: normalizeExpr(a.expr || a.value) }));
+    const assignments = ast.assignments.map((a: unknown) => ({ id: a.id || a.name, expr: normalizeExpr(a.expr || a.value) }));
     return { indicators: ast.indicators || [], assignments };
   }
   if (Array.isArray(ast.assignments)) {
-    return { indicators: ast.indicators || [], assignments: ast.assignments.map((a: any) => ({ id: a.id, expr: normalizeExpr(a.expr) })) };
+    return { indicators: ast.indicators || [], assignments: ast.assignments.map((a: unknown) => ({ id: a.id, expr: normalizeExpr(a.expr) })) };
   }
   return ast;
 }
 
-function normalizeExpr(e: any): any {
+function normalizeExpr(e: unknown): unknown {
   if (e == null) return e;
   if (typeof e === 'number') return { type: 'Number', value: e };
   if (e.type === 'Number') return { type: 'Number', value: e.value };
@@ -39,7 +39,7 @@ describe('generated parser compatibility (optional)', () => {
   const genPath = candidates.find(p => fs.existsSync(p));
 
   async function loadGenParse() {
-    if (!genPath) return undefined as any;
+    if (!genPath) return undefined as unknown;
     if (genPath.endsWith('.cjs')) {
       const req = createRequire(import.meta.url);
       const g = req(genPath);
@@ -62,10 +62,10 @@ describe('generated parser compatibility (optional)', () => {
       `a = "hello world"\n`,
     ];
     for (const s of samples) {
-      const h = handParse(s as any);
-      let gRaw: any;
+      const h = handParse(s as unknown);
+      let gRaw: unknown;
       try {
-        gRaw = genParse(s as any);
+        gRaw = genParse(s as unknown);
       } catch (err) {
         // If generated parser fails to parse, treat as mismatch and fail the test with the error message
         throw err;

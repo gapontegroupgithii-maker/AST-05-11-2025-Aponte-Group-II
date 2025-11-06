@@ -2,24 +2,24 @@ import { parse } from '../star-parser/index';
 import { evaluate } from './index';
 
 export type RunResult = {
-  env: Record<string, any>;
-  plots: any[];
-  indicators: any[];
+  env: Record<string, unknown>;
+  plots: unknown[];
+  indicators: unknown[];
 };
 
 export function makeDefaultEnv() {
-  const plots: any[] = [];
+  const plots: unknown[] = [];
   // create a small synthetic series for examples (most examples only need a few values)
   const seriesLen = 200;
   const closeSeries = Array.from({ length: seriesLen }, (_, i) => 100 + i * 0.5);
   const highSeries = closeSeries.map(v => v + 1);
   const lowSeries = closeSeries.map(v => v - 1);
 
-  const env: Record<string, any> = {
+  const env: Record<string, unknown> = {
     math: { avg: (...args: number[]) => args.reduce((s,n) => s+n,0)/args.length },
     color: { rgb: (r:number,g:number,b:number) => `rgb(${r},${g},${b})` },
     // input.int can be called as input.int(def, title, "Name") or input.int(def, { title: 'Name' })
-    input: { int: (...args:any[]) => {
+    input: { int: (...args: unknown[]) => {
       const def = args[0];
       // detect named form
       if (args.length >= 3 && typeof args[1] === 'string') {
@@ -33,10 +33,10 @@ export function makeDefaultEnv() {
       }
       return def;
     } },
-    plot: (...args:any[]) => {
+    plot: (...args: unknown[]) => {
       // support plot(series, title) or plot(series, { title, color })
       let series = args[0];
-      let opts: any = {};
+      let opts: unknown = {};
       if (args.length >= 2) {
         if (typeof args[1] === 'string') opts.title = args[1];
         else if (typeof args[1] === 'object') opts = { ...args[1] };
@@ -52,7 +52,7 @@ export function makeDefaultEnv() {
   };
   // simple request helper: returns a series for the requested symbol/timeframe
   env.request = {
-      security: (symbol: string, timeframe: string, expr: any) => {
+      security: (symbol: string, timeframe: string, expr: unknown) => {
         // Enhance: return a synthetic series derived from symbol+timeframe so different
         // symbols/timeframes produce different (but deterministic) arrays for tests.
         const seed = stringHash(String(symbol) + '|' + String(timeframe));
@@ -72,7 +72,7 @@ export function makeDefaultEnv() {
     }
   // Add common TA helpers to the environment
   env.ta = {
-    sma: (src: any, len: number) => {
+    sma: (src: unknown, len: number) => {
       if (Array.isArray(src)) {
         const n = Math.max(1, Math.floor(len) || 1);
         const slice = src.slice(-n);
@@ -81,7 +81,7 @@ export function makeDefaultEnv() {
       }
       return src;
     },
-    rsi: (src: any, len: number) => {
+    rsi: (src: unknown, len: number) => {
       if (!Array.isArray(src)) return 50;
       const n = Math.max(1, Math.floor(len) || 14);
       const slice = src.slice(- (n + 1));
@@ -98,8 +98,8 @@ export function makeDefaultEnv() {
       const rsi = 100 - (100 / (1 + rs));
       return rsi;
     },
-    highest: (src: any, len: number) => Array.isArray(src) ? Math.max(...src.slice(-(len||1))) : src,
-    lowest: (src: any, len: number) => Array.isArray(src) ? Math.min(...src.slice(-(len||1))) : src,
+    highest: (src: unknown, len: number) => Array.isArray(src) ? Math.max(...src.slice(-(len||1))) : src,
+    lowest: (src: unknown, len: number) => Array.isArray(src) ? Math.min(...src.slice(-(len||1))) : src,
   };
   // strategy stub with simple entry/exit recording and lightweight position tracking
   env.strategy = {
@@ -107,13 +107,13 @@ export function makeDefaultEnv() {
   commission: { percent: 0.0 },
   _internal: { entries: [], exits: [], position: { size: 0, avg: 0 }, orders: [], trades: [], realizedPnL: 0 },
     _internal: { entries: [], exits: [], position: { size: 0, avg: 0 }, orders: [], trades: [] },
-    entry: (id: any, qty?: number) => {
+    entry: (id: unknown, qty?: number) => {
       env.strategy._internal.entries.push({ id, qty });
       // use order to fill
       env.strategy.order(id, 'buy', qty);
       return null;
     },
-    exit: (id: any) => {
+    exit: (id: unknown) => {
       env.strategy._internal.exits.push({ id });
       // close entire position for this id
       const pos = env.strategy._internal.position;
@@ -122,12 +122,12 @@ export function makeDefaultEnv() {
     },
     // immediate-market order simulation: fills at last close price
     // order supports optional opts: { slippage: 0.001, fillPercent: 0.5 }
-    order: function(id: any, action: string, qty?: number, opts?: any) {
+    order: function(id: unknown, action: string, qty?: number, opts?: unknown) {
       // support both object opts and named-arg form where args are: ..., 'name', value
       // capture any extra args from arguments to detect name/value pairs
-      const extra: any[] = Array.prototype.slice.call(arguments, 3);
+      const extra: unknown[] = Array.prototype.slice.call(arguments, 3);
       // Normalize opts: prefer an object and merge named-arg pairs from extra
-      let localOpts: Record<string, any> = (opts && typeof opts === 'object') ? opts : {};
+      let localOpts: Record<string, unknown> = (opts && typeof opts === 'object') ? opts : {};
       if (extra && extra.length >= 2) {
         for (let i = 0; i < extra.length; i += 2) {
           const k = extra[i];
@@ -192,7 +192,7 @@ export function runScript(source: string, options?: { opLimit?: number }): RunRe
   const indicators = prog.indicators || [];
   for (const a of prog.assignments || []) {
     const id = a.id;
-    const val = evaluate(a.expr, env as unknown as any);
+    const val = evaluate(a.expr, env as unknown as unknown);
     if (id === '_call') {
       // calls like plot(...) have already pushed to env.plots via plot stub
       continue;

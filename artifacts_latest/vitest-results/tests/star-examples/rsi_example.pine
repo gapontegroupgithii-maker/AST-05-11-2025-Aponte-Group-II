@@ -1,0 +1,6 @@
+// RSI ejemplo
+//@version=5
+indicator("RSI Example", overlay=false)
+length = input.int(14, title = "RSI Length")
+rsi_v = ta.rsi(close, length)
+plot(rsi_v, title = "RSI")

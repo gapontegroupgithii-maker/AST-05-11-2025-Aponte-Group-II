@@ -4,26 +4,26 @@ import fs from 'fs'
 import path from 'path'
 import { createRequire } from 'module'
 
-function normalize(obj: any): any {
+function normalize(obj: unknown): unknown {
   return JSON.parse(JSON.stringify(obj, (k, v) => {
     if (k === 'loc' || k === 'location' || k === 'start' || k === 'end') return undefined;
     return v;
   }));
 }
 
-function canonicalize(ast: any): any {
+function canonicalize(ast: unknown): unknown {
   if (!ast) return ast;
   if (ast.type === 'Program' && Array.isArray(ast.assignments)) {
-    const assignments = ast.assignments.map((a: any) => ({ id: a.id || a.name, expr: normalizeExpr(a.expr || a.value) }));
+    const assignments = ast.assignments.map((a: unknown) => ({ id: a.id || a.name, expr: normalizeExpr(a.expr || a.value) }));
     return { indicators: ast.indicators || [], assignments };
   }
   if (Array.isArray(ast.assignments)) {
-    return { indicators: ast.indicators || [], assignments: ast.assignments.map((a: any) => ({ id: a.id, expr: normalizeExpr(a.expr) })) };
+    return { indicators: ast.indicators || [], assignments: ast.assignments.map((a: unknown) => ({ id: a.id, expr: normalizeExpr(a.expr) })) };
   }
   return ast;
 }
 
-function normalizeExpr(e: any): any {
+function normalizeExpr(e: unknown): unknown {
   if (e == null) return e;
   if (typeof e === 'number') return { type: 'Number', value: e };
   if (e.type === 'Number') return { type: 'Number', value: e.value };
@@ -46,7 +46,7 @@ describe('parser binary precedence', () => {
   const genPath = genCandidates.find(p => fs.existsSync(p));
 
   async function loadGenParse() {
-    if (!genPath) return undefined as any;
+    if (!genPath) return undefined as unknown;
     const genPathNonNull = genPath as string;
     if (genPathNonNull.endsWith('.cjs')) {
       const req = createRequire(import.meta.url);
@@ -66,9 +66,9 @@ describe('parser binary precedence', () => {
     it(`hand vs generated parser binary sample ${i}`, async () => {
       const genParse = await loadGenParse();
       if (!genParse) { expect(true).toBe(true); return; }
-      const h = handParse(s as any);
-      let gRaw: any;
-      try { gRaw = genParse(s as any); } catch (err) { throw err; }
+      const h = handParse(s as unknown);
+      let gRaw: unknown;
+      try { gRaw = genParse(s as unknown); } catch (err) { throw err; }
       let g = gRaw;
       try { const { adaptGeneratedProgram } = await import('../../src/lib/star-parser/gen-adapter'); g = adaptGeneratedProgram(gRaw); } catch (e) {}
       const H = canonicalize(normalize(h));

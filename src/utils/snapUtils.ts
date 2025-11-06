@@ -69,7 +69,7 @@ export const pointToCoordinate = (
   try {
     const timeScale = chart.timeScale();
     
-    const x = timeScale.logicalToCoordinate(point.time as any) || 0;
+    const x = timeScale.logicalToCoordinate(point.time as unknown) || 0;
     const y = series.priceToCoordinate(point.price);
     
     return { x, y };

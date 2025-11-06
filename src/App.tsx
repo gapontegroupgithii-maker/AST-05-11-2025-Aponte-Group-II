@@ -9,10 +9,10 @@ import React from 'react';
 
 const queryClient = new QueryClient();
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: any }> {
-  constructor(props: any) { super(props); this.state = { hasError: false, error: undefined }; }
-  static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
-  componentDidCatch(error: any, info: any) {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: unknown }> {
+  constructor(props: unknown) { super(props); this.state = { hasError: false, error: undefined }; }
+  static getDerivedStateFromError(error: unknown) { return { hasError: true, error }; }
+  componentDidCatch(error: unknown, info: unknown) {
     // log to console for debugging
     console.error('Unhandled error caught by ErrorBoundary:', error, info);
   }
@@ -26,7 +26,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
         </div>
       );
     }
-    return this.props.children as any;
+    return this.props.children as unknown;
   }
 }
 

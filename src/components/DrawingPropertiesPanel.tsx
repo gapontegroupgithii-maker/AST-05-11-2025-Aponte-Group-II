@@ -15,38 +15,38 @@ const DrawingPropertiesPanel: React.FC = () => {
 
   const onChangeColor = (e: React.ChangeEvent<HTMLInputElement>) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    updateDrawing(drawing.id, { options: { ...drawing.options, color: e.target.value } as any });
+    updateDrawing(drawing.id, { options: { ...drawing.options, color: e.target.value } as unknown });
   };
   const onChangeWidth = (e: React.ChangeEvent<HTMLInputElement>) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    updateDrawing(drawing.id, { options: { ...drawing.options, lineWidth: Number(e.target.value) } as any });
+    updateDrawing(drawing.id, { options: { ...drawing.options, lineWidth: Number(e.target.value) } as unknown });
   };
   const onChangeOpacity = (e: React.ChangeEvent<HTMLInputElement>) => {
     // store opacity in fillColor alpha or as new option; we'll add an opacity field
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    updateDrawing(drawing.id, { options: { ...drawing.options, opacity: Number(e.target.value) } as any });
+    updateDrawing(drawing.id, { options: { ...drawing.options, opacity: Number(e.target.value) } as unknown });
   };
 
   const onChangeBoxX = (e: React.ChangeEvent<HTMLInputElement>) => {
     const x = Number(e.target.value);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    updateDrawing(drawing.id, { options: { ...(drawing.options as any), boxPosition: { x, y: (drawing.options as any).boxPosition?.y ?? 0 } } as any });
+    updateDrawing(drawing.id, { options: { ...(drawing.options as unknown), boxPosition: { x, y: (drawing.options as unknown).boxPosition?.y ?? 0 } } as unknown });
   };
 
   const onChangeBoxY = (e: React.ChangeEvent<HTMLInputElement>) => {
     const y = Number(e.target.value);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    updateDrawing(drawing.id, { options: { ...(drawing.options as any), boxPosition: { x: (drawing.options as any).boxPosition?.x ?? 0, y } } as any });
+    updateDrawing(drawing.id, { options: { ...(drawing.options as unknown), boxPosition: { x: (drawing.options as unknown).boxPosition?.x ?? 0, y } } as unknown });
   };
 
   const onResetBox = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const opts = { ...(drawing.options as any) };
+    const opts = { ...(drawing.options as unknown) };
     // remove boxPosition if present
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((opts as any).boxPosition) delete (opts as any).boxPosition;
+    if ((opts as unknown).boxPosition) delete (opts as unknown).boxPosition;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    updateDrawing(drawing.id, { options: opts as any });
+    updateDrawing(drawing.id, { options: opts as unknown });
   };
 
   const onDelete = () => {
@@ -67,15 +67,15 @@ const DrawingPropertiesPanel: React.FC = () => {
       <input type="range" min={1} max={8} value={drawing.options.lineWidth} onChange={onChangeWidth} className="w-full mb-3" />
       <div className="text-xs text-muted-foreground mb-1">Opacidad</div>
   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-  <input type="range" min={0.1} max={1} step={0.05} value={(drawing.options as any).opacity ?? 1} onChange={onChangeOpacity} className="w-full mb-3" />
+  <input type="range" min={0.1} max={1} step={0.05} value={(drawing.options as unknown).opacity ?? 1} onChange={onChangeOpacity} className="w-full mb-3" />
       {drawing.type === 'ruler' && (
         <>
           <div className="text-xs text-muted-foreground mb-1">Posición caja X</div>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <input type="number" value={(drawing.options as any).boxPosition?.x ?? ''} onChange={onChangeBoxX} className="w-full mb-2 p-1 text-sm" />
+          <input type="number" value={(drawing.options as unknown).boxPosition?.x ?? ''} onChange={onChangeBoxX} className="w-full mb-2 p-1 text-sm" />
           <div className="text-xs text-muted-foreground mb-1">Posición caja Y</div>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <input type="number" value={(drawing.options as any).boxPosition?.y ?? ''} onChange={onChangeBoxY} className="w-full mb-2 p-1 text-sm" />
+          <input type="number" value={(drawing.options as unknown).boxPosition?.y ?? ''} onChange={onChangeBoxY} className="w-full mb-2 p-1 text-sm" />
           <button className="w-full bg-slate-600 hover:bg-slate-500 text-white rounded py-1 mb-3 text-sm" onClick={onResetBox}>Restablecer posición caja</button>
         </>
       )}

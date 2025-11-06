@@ -7,15 +7,15 @@ import { transformProgram } from './star-ast-transform';
 
 export function transpilePineToStar(source: string): string {
   // For MVP: parse with hand parser then map calls via transformProgram
-  const ast = handParse(source as any);
-  const t = transformProgram(ast as any);
+  const ast = handParse(source as unknown);
+  const t = transformProgram(ast as unknown);
   // naive rendering: emit assignments back to textual form using star.* names
   const lines: string[] = [];
   for (const a of t.assignments || []) {
     if (a.id === '_call') {
       // call side-effects like plot
       const c = a.expr;
-      const args = (c.args || []).map((x: any) => renderExpr(x)).join(', ');
+      const args = (c.args || []).map((x: unknown) => renderExpr(x)).join(', ');
       lines.push(`${c.callee}(${args})`);
       continue;
     }
@@ -31,18 +31,18 @@ export function transpileToJsModule(source: string): string {
   // For robust execution we embed the transformed AST (not textual star).
   // This allows the generated module to be executed by providing a runtime
   // object with `evaluate` and `makeDefaultEnv`.
-  const progAst = transformProgram((handParse as any)(source as any) as any);
+  const progAst = transformProgram((handParse as unknown)(source as unknown) as unknown);
   const astJson = JSON.stringify(progAst).replace(/\\/g, '\\\\').replace(/`/g, '\\`');
   return `(function(runtime){\n  const prog = JSON.parse(` + '`' + `${astJson}` + '`' + `);\n  const env = runtime.makeDefaultEnv();\n  env.star = { plot: env.plot, ta: env.ta, request: env.request, input: env.input, math: env.math, color: env.color, strategy: env.strategy };\n  for (const a of prog.assignments || []) {\n    if (a.id === '_call') { runtime.evaluate(a.expr, env); continue; }\n    env[a.id] = runtime.evaluate(a.expr, env);\n  }\n  return { env, plots: env.plots || [] };\n})`;
 }
 
-function renderExpr(e: any): string {
+function renderExpr(e: unknown): string {
   if (!e) return '';
   if (e.type === 'Call') {
     // support named args encoded as Identifier followed by a value
     const rawArgs = e.args || [];
-    const posArgs: any[] = [];
-    const named: Record<string, any> = {};
+    const posArgs: unknown[] = [];
+    const named: Record<string, unknown> = {};
     for (let i = 0; i < rawArgs.length; i++) {
       const a = rawArgs[i];
       const next = rawArgs[i + 1];

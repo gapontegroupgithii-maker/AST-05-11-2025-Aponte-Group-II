@@ -101,13 +101,13 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       el.style.right = `${panelWidthPx}px`;
       // if chart instance exists, resize it to the new container width
       if (chartRef.current) {
-        const w = el.clientWidth || Math.max(0, (chartRef.current as any).width || 0);
-        const h = el.clientHeight || Math.max(0, (chartRef.current as any).height || 0);
+        const w = el.clientWidth || Math.max(0, (chartRef.current as unknown).width || 0);
+        const h = el.clientHeight || Math.max(0, (chartRef.current as unknown).height || 0);
         try {
-          chartRef.current.applyOptions({ width: w, height: h } as any);
+          chartRef.current.applyOptions({ width: w, height: h } as unknown);
         } catch (err) {
           // fallback: attempt to call chartRef.current.resize if available
-          try { (chartRef.current as any).resize?.(w, h); } catch (e) { /* ignore */ }
+          try { (chartRef.current as unknown).resize?.(w, h); } catch (e) { /* ignore */ }
         }
       }
     } catch (err) {
@@ -154,10 +154,10 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
 
   // Apply chart settings (colors, precision, wick) when settings change
   useEffect(() => {
-    const applySettings = (s: any) => {
+    const applySettings = (s: unknown) => {
       try {
         if (!seriesRef.current) return;
-        const opts: any = {};
+        const opts: unknown = {};
         if (s.symbolColorBody) {
           // map body color to up/down for demo: keep same color for up, slightly darker for down if not provided
           opts.upColor = s.symbolColorBody;
@@ -264,7 +264,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
         const height = rect.height || 1;
         // current prices at top and bottom
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const series = seriesRef.current as any;
+        const series = seriesRef.current as unknown;
         const topPrice = series.priceToCoordinate ? series.coordinateToPrice(0) : null;
         // coordinateToPrice expects y coordinate; top=0, bottom=height
         const priceTop = series.coordinateToPrice(0);
@@ -295,10 +295,10 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
         // set visible price range on right price scale if available
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const priceScaleApi = (chartRef.current as any).priceScale?.('right');
+          const priceScaleApi = (chartRef.current as unknown).priceScale?.('right');
           if (priceScaleApi && typeof priceScaleApi.setVisibleRange === 'function') {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            priceScaleApi.setVisibleRange({ from: newTop as any, to: newBottom as any });
+            priceScaleApi.setVisibleRange({ from: newTop as unknown, to: newBottom as unknown });
             return;
           }
         } catch (err) {
@@ -323,11 +323,11 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       const timeScale = chartRef.current.timeScale();
       const visible = timeScale.getVisibleRange() as unknown;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (!visible || typeof (visible as any).from === 'undefined' || typeof (visible as any).to === 'undefined') return;
+      if (!visible || typeof (visible as unknown).from === 'undefined' || typeof (visible as unknown).to === 'undefined') return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const from = (visible as any).from as number;
+      const from = (visible as unknown).from as number;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const to = (visible as any).to as number;
+      const to = (visible as unknown).to as number;
       const span = to - from;
       // sensitivity: smaller value => slower zoom; positive deltaY -> zoom out
       const sensitivity = 0.0014;
@@ -343,7 +343,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
         // clamp around center
         const half = minSpan / 2;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        timeScale.setVisibleRange({ from: (center - half) as any, to: (center + half) as any });
+        timeScale.setVisibleRange({ from: (center - half) as unknown, to: (center + half) as unknown });
         return;
       }
       if (newSpan > maxSpan) {
@@ -351,11 +351,11 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
         // keep center
         const half = newSpan / 2;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        timeScale.setVisibleRange({ from: (center - half) as any, to: (center + half) as any });
+        timeScale.setVisibleRange({ from: (center - half) as unknown, to: (center + half) as unknown });
         return;
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      timeScale.setVisibleRange({ from: newFrom as any, to: newTo as any });
+      timeScale.setVisibleRange({ from: newFrom as unknown, to: newTo as unknown });
     } catch (err) {
       // ignore
     }
@@ -366,7 +366,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
     if (!chartRef.current) return;
     try {
       const timeScale = chartRef.current.timeScale();
-      const vis = timeScale.getVisibleRange() as any;
+      const vis = timeScale.getVisibleRange() as unknown;
       if (!vis) return;
       const from = vis.from as number;
       const to = vis.to as number;
@@ -374,7 +374,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       const factor = 0.8; // zoom in
       const newFrom = center - (center - from) * factor;
       const newTo = center + (to - center) * factor;
-      timeScale.setVisibleRange({ from: newFrom as any, to: newTo as any });
+      timeScale.setVisibleRange({ from: newFrom as unknown, to: newTo as unknown });
     } catch (e) { /* ignore */ }
   };
 
@@ -382,7 +382,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
     if (!chartRef.current) return;
     try {
       const timeScale = chartRef.current.timeScale();
-      const vis = timeScale.getVisibleRange() as any;
+      const vis = timeScale.getVisibleRange() as unknown;
       if (!vis) return;
       const from = vis.from as number;
       const to = vis.to as number;
@@ -390,7 +390,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       const factor = 1.25; // zoom out
       const newFrom = center - (center - from) * factor;
       const newTo = center + (to - center) * factor;
-      timeScale.setVisibleRange({ from: newFrom as any, to: newTo as any });
+      timeScale.setVisibleRange({ from: newFrom as unknown, to: newTo as unknown });
     } catch (e) { /* ignore */ }
   };
 
@@ -420,7 +420,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
     try {
       // try built-in screenshot if available
       // @ts-ignore
-      const dataUrl = await (chartRef.current as any)?.takeScreenshot?.();
+      const dataUrl = await (chartRef.current as unknown)?.takeScreenshot?.();
       if (dataUrl) {
         const a = document.createElement('a'); a.href = dataUrl; a.download = `${symbol || 'chart'}-snapshot.png`; a.click();
         return;
@@ -431,7 +431,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
 
   const handleBarSpacingChange = (v: number) => {
     setBarSpacing(v);
-    try { chartRef.current?.applyOptions({ timeScale: { barSpacing: v } as any } as any); } catch (e) { /* ignore */ }
+    try { chartRef.current?.applyOptions({ timeScale: { barSpacing: v } as unknown } as unknown); } catch (e) { /* ignore */ }
   };
 
   const handleVerticalStretchChange = (v: number) => {
@@ -537,9 +537,9 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
         const timeScale = chartRef.current.timeScale();
         const vis = timeScale.getVisibleRange() as unknown;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (vis && typeof (vis as any).from !== 'undefined' && typeof (vis as any).to !== 'undefined') {
+        if (vis && typeof (vis as unknown).from !== 'undefined' && typeof (vis as unknown).to !== 'undefined') {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          panStartRangeRef.current = { from: (vis as any).from as number, to: (vis as any).to as number };
+          panStartRangeRef.current = { from: (vis as unknown).from as number, to: (vis as unknown).to as number };
         } else {
           panStartRangeRef.current = null;
         }
@@ -549,7 +549,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       // prevent text selection/other
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (e.currentTarget as Element).setPointerCapture?.((e as unknown as any).pointerId);
+        (e.currentTarget as Element).setPointerCapture?.((e as unknown as unknown).pointerId);
       } catch (err) {
         // ignore
       }
@@ -574,7 +574,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       const newTo = (to as number) - ratio * span;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        chartRef.current.timeScale().setVisibleRange({ from: newFrom as any, to: newTo as any });
+        chartRef.current.timeScale().setVisibleRange({ from: newFrom as unknown, to: newTo as unknown });
       } catch (err) {
         // ignore
       }
@@ -627,7 +627,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       try {
         // capture pointer to continue receiving move/up
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (e.currentTarget as Element).setPointerCapture?.((e as unknown as any).pointerId);
+        (e.currentTarget as Element).setPointerCapture?.((e as unknown as unknown).pointerId);
       } catch (err) {
         // ignore
       }
@@ -657,7 +657,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       if (!drawing) return;
       const updatedPoints = drawing.points.map((pt, idx) => idx === dragState.handleIndex ? newPoint : pt);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  updateDrawing(dragState.drawingId, { points: updatedPoints } as any);
+  updateDrawing(dragState.drawingId, { points: updatedPoints } as unknown);
       return;
     }
 
@@ -673,7 +673,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       drawPointerUp(e);
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (e.currentTarget as Element).releasePointerCapture?.((e as unknown as any).pointerId);
+        (e.currentTarget as Element).releasePointerCapture?.((e as unknown as unknown).pointerId);
       } catch (err) {
         // ignore
       }
@@ -700,7 +700,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       panStartRangeRef.current = null;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (e.currentTarget as Element).releasePointerCapture?.((e as unknown as any).pointerId);
+        (e.currentTarget as Element).releasePointerCapture?.((e as unknown as unknown).pointerId);
       } catch (err) {
         // ignore
       }
@@ -724,16 +724,16 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
           try {
             const vis = timeScale.getVisibleRange() as unknown;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if (vis && typeof (vis as any).from !== 'undefined' && typeof (vis as any).to !== 'undefined') {
+            if (vis && typeof (vis as unknown).from !== 'undefined' && typeof (vis as unknown).to !== 'undefined') {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const from = (vis as any).from as number;
+              const from = (vis as unknown).from as number;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const to = (vis as any).to as number;
+              const to = (vis as unknown).to as number;
               const span = to - from;
               const newFrom = from - ratio * span;
               const newTo = to - ratio * span;
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              chartRef.current.timeScale().setVisibleRange({ from: newFrom as any, to: newTo as any });
+              chartRef.current.timeScale().setVisibleRange({ from: newFrom as unknown, to: newTo as unknown });
             }
           } catch (err) {
             // ignore
@@ -964,19 +964,19 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       const tsOpts = (chart.timeScale() as unknown as { options?: () => unknown }).options?.() ?? {};
       // if barSpacing available use it, otherwise keep default
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      barSpacingRef.current = (tsOpts as any)?.barSpacing ?? barSpacingRef.current;
+      barSpacingRef.current = (tsOpts as unknown)?.barSpacing ?? barSpacingRef.current;
     } catch (err) {
       // ignore
     }
     try {
       const opts = (chart as unknown as { options?: () => unknown }).options?.() as unknown;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rps = (opts as any)?.rightPriceScale ?? {};
+      const rps = (opts as unknown)?.rightPriceScale ?? {};
       priceScaleMarginsRef.current = {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        top: (rps as any).scaleMargins?.top ?? priceScaleMarginsRef.current.top,
+        top: (rps as unknown).scaleMargins?.top ?? priceScaleMarginsRef.current.top,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        bottom: (rps as any).scaleMargins?.bottom ?? priceScaleMarginsRef.current.bottom,
+        bottom: (rps as unknown).scaleMargins?.bottom ?? priceScaleMarginsRef.current.bottom,
       };
     } catch (err) {
       // ignore
@@ -984,7 +984,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
 
     // crosshair subscription
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  chart.subscribeCrosshairMove((param: any) => {
+  chart.subscribeCrosshairMove((param: unknown) => {
       if (!param || !param.point) {
         setCrosshair(null);
         return;
@@ -1086,7 +1086,7 @@ const TradingChart = ({ symbol, timeframe, drawingTools, isMarketPanelOpen }: Tr
       // setData will replace whole dataset (initial load). Later updates come from the hook updating state
       // we keep using setData to ensure series and internal timeScale are consistent
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (seriesRef.current as any).setData(marketPriceData as any);
+  (seriesRef.current as unknown).setData(marketPriceData as unknown);
   setPriceData(marketPriceData as Array<{ time: number; open: number; high: number; low: number; close: number; volume: number }>);
       const last = marketPriceData[marketPriceData.length - 1];
       if (last) {

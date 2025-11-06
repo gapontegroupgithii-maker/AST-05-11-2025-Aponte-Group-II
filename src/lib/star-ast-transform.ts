@@ -5,15 +5,15 @@
 
 // Use `any` types here to avoid tight coupling with parser types during
 // incremental development. The runtime behavior is what matters for tests.
-export function transformProgram(ast: any): any {
-  const out: any = { version: ast.version ?? null, indicators: Array.isArray(ast.indicators) ? [...ast.indicators] : [], assignments: [] };
+export function transformProgram(ast: unknown): unknown {
+  const out: unknown = { version: ast.version ?? null, indicators: Array.isArray(ast.indicators) ? [...ast.indicators] : [], assignments: [] };
   for (const a of ast.assignments || []) {
     out.assignments.push({ id: a.id, expr: transformExpression(a.expr) });
   }
   return out;
 }
 
-function transformExpression(expr: any): any {
+function transformExpression(expr: unknown): unknown {
   if (!expr || typeof expr !== 'object') return expr;
   const t = expr.type;
 

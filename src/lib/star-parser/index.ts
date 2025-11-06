@@ -4,8 +4,8 @@
 // it's a pragmatic scaffold so the test suite can run in this branch.
 
 export type Program = {
-  indicators?: any[];
-  assignments: Array<{ id: string; expr: any }>;
+  indicators?: unknown[];
+  assignments: Array<{ id: string; expr: unknown }>;
 };
 
 function trim(s: string) { return s.trim(); }
@@ -77,7 +77,7 @@ function parseCall(text: string) {
   }
 
   const rawParts = splitTopLevelComma(argsRaw);
-  const args: any[] = [];
+  const args: unknown[] = [];
   for (const a of rawParts) {
     const named = a.match(/^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(.+)$/s);
     if (named) {
@@ -124,7 +124,7 @@ function parseCall(text: string) {
 }
 
 // --- small expression parser used by hand-written parser ---
-type Token = { type: string; value: any };
+type Token = { type: string; value: unknown };
 
 function tokenizeExpr(s: string): Token[] {
   const tokens: Token[] = [];
@@ -140,9 +140,9 @@ function tokenizeExpr(s: string): Token[] {
   return tokens;
 }
 
-function parseExpressionTokens(tokens: Token[], posRef: { pos: number }): any {
+function parseExpressionTokens(tokens: Token[], posRef: { pos: number }): unknown {
   // recursive descent with precedence
-  function parsePrimary(): any {
+  function parsePrimary(): unknown {
     const p = posRef.pos;
     const t = tokens[p];
     if (!t) return null;
@@ -153,12 +153,12 @@ function parseExpressionTokens(tokens: Token[], posRef: { pos: number }): any {
       posRef.pos++;
       let name = t.value;
       // handle dotted identifiers already included in token
-      let node: any = { type: 'Identifier', name };
+      let node: unknown = { type: 'Identifier', name };
       // function call
       if (tokens[posRef.pos] && tokens[posRef.pos].type === 'Punct' && tokens[posRef.pos].value === '(') {
         // parse args
         posRef.pos++; // consume '('
-        const args: any[] = [];
+        const args: unknown[] = [];
         while (tokens[posRef.pos] && !(tokens[posRef.pos].type === 'Punct' && tokens[posRef.pos].value === ')')) {
           const arg = parseExpressionTokens(tokens, posRef);
           if (arg !== undefined) args.push(arg);
@@ -185,7 +185,7 @@ function parseExpressionTokens(tokens: Token[], posRef: { pos: number }): any {
     return null;
   }
 
-  function parseUnary(): any {
+  function parseUnary(): unknown {
     const t = tokens[posRef.pos];
     if (t && t.type === 'Punct' && (t.value === '+' || t.value === '-')) {
       posRef.pos++;
@@ -195,7 +195,7 @@ function parseExpressionTokens(tokens: Token[], posRef: { pos: number }): any {
     return parsePrimary();
   }
 
-  function parsePow(): any {
+  function parsePow(): unknown {
     let left = parseUnary();
     while (tokens[posRef.pos] && tokens[posRef.pos].type === 'Punct' && tokens[posRef.pos].value === '^') {
       const op = tokens[posRef.pos].value; posRef.pos++;
@@ -205,7 +205,7 @@ function parseExpressionTokens(tokens: Token[], posRef: { pos: number }): any {
     return left;
   }
 
-  function parseMulDiv(): any {
+  function parseMulDiv(): unknown {
     let left = parsePow();
     while (tokens[posRef.pos] && tokens[posRef.pos].type === 'Punct' && (tokens[posRef.pos].value === '*' || tokens[posRef.pos].value === '/')) {
       const op = tokens[posRef.pos].value; posRef.pos++;
@@ -215,7 +215,7 @@ function parseExpressionTokens(tokens: Token[], posRef: { pos: number }): any {
     return left;
   }
 
-  function parseAddSub(): any {
+  function parseAddSub(): unknown {
     let left = parseMulDiv();
     while (tokens[posRef.pos] && tokens[posRef.pos].type === 'Punct' && (tokens[posRef.pos].value === '+' || tokens[posRef.pos].value === '-')) {
       const op = tokens[posRef.pos].value; posRef.pos++;
@@ -246,7 +246,7 @@ export function parse(input: string): Program {
     if (assignMatch) {
       const id = assignMatch[1];
       const rhs = assignMatch[2].trim();
-      let expr: any = null;
+      let expr: unknown = null;
       // try to parse expression tokens
       try {
         const tokens = tokenizeExpr(rhs);

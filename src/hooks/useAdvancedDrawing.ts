@@ -26,7 +26,7 @@ export const useAdvancedDrawing = (
   const startPointRef = useRef<{ time: number; price: number; x: number; y: number } | null>(null);
   const drawPointsRef = useRef<Array<{ time: number; price: number; x: number; y: number }> | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [previewDrawing, setPreviewDrawing] = useState<any>(null);
+  const [previewDrawing, setPreviewDrawing] = useState<unknown>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!chart || !series || !activeTool) return;
@@ -156,7 +156,7 @@ export const useAdvancedDrawing = (
         // use shared util to calculate measurements consistently
   // narrow types for the util (store points use same shape)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  measurements = calculateMeasurements(startPointRef.current as any, endPoint as any);
+  measurements = calculateMeasurements(startPointRef.current as unknown, endPoint as unknown);
       } catch (err) {
         measurements = undefined;
       }

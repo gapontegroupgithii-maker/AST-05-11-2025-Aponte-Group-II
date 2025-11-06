@@ -11,18 +11,18 @@ describe('transpiler end-to-end', () => {
     const star = transpilePineToStar(src);
     const resOrig = runScript(src);
     // For transformed AST evaluate programmatically using evaluate + env
-  const p = handParse(src as any);
-  const t = transformProgram(p as any);
+  const p = handParse(src as unknown);
+  const t = transformProgram(p as unknown);
   const env = makeDefaultEnv();
   // mirror star.* namespace so transformed callees like 'star.plot' resolve
   env.star = { plot: env.plot, ta: env.ta, request: env.request, input: env.input, math: env.math, color: env.color, strategy: env.strategy };
     for (const a of t.assignments || []) {
       if (a.id === '_call') {
         // evaluate call expr (will push plots via env.plot)
-        evaluate(a.expr, env as any);
+        evaluate(a.expr, env as unknown);
         continue;
       }
-      env[a.id] = evaluate(a.expr, env as any);
+      env[a.id] = evaluate(a.expr, env as unknown);
     }
     const resStar = { env, plots: env.plots || [] };
   // Basic equivalence: same number of plots and same callee name

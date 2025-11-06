@@ -44,8 +44,8 @@ export async function fetchAllBrokersMarkets(): Promise<BrokerMarkets[]> {
   // fall back to STATIC_BROKERS on error or if no endpoint is configured.
   try {
     // Example: window.__MARKET_ENDPOINT__ could be set by the host
-    // if (typeof window !== 'undefined' && (window as any).__MARKET_ENDPOINT__) {
-    //   const res = await fetch((window as any).__MARKET_ENDPOINT__ + '/brokers');
+    // if (typeof window !== 'undefined' && (window as unknown).__MARKET_ENDPOINT__) {
+    //   const res = await fetch((window as unknown).__MARKET_ENDPOINT__ + '/brokers');
     //   if (res.ok) return await res.json();
     // }
     // For now return static data with a small artificial delay to simulate network
