@@ -93,7 +93,8 @@ for (const fx of fixtures) {
   // normalize both ASTs to comparable canonical shapes
   const handNorm = handAst && !handAst.error ? normalizeAst(handAst) : handAst;
   const genNorm = genAst && !genAst.error ? normalizeAst(genAst) : genAst;
-  diffs.push({ name: fx.name, hand: handNorm, gen: genNorm });
+  // store both raw and normalized shapes so reports can show both for debugging
+  diffs.push({ name: fx.name, handRaw: handAst, genRaw: genAst, hand: handNorm, gen: genNorm });
 }
 
 const out = { generatedAt: new Date().toISOString(), diffs };
@@ -105,10 +106,11 @@ console.log('Wrote parser-diff.json ->', outPath);
 // produced an error for a fixture, or the JSON representation differs.
 let anyDiff = false;
 for (const d of diffs) {
+  // if either parser errored, it's a diff
   if (!d.hand || !d.gen) { anyDiff = true; break; }
   if (d.hand.error || d.gen.error) { anyDiff = true; break; }
-  // JSON stringify compare (simple structural check). If generated parser
-  // intentionally has different shape this will count as a diff.
+  // Compare the normalized canonical shapes (hand/gen) to avoid false
+  // positives caused by different internal representations.
   try {
     const h = JSON.stringify(d.hand);
     const g = JSON.stringify(d.gen);

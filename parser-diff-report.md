@@ -1,10 +1,10 @@
 # Parser Diff Report
 
-Generated: 2025-11-05T05:22:25.064Z
+Generated: 2025-11-06T00:46:06.449Z
 
 ## Fixture: sample1
 
-### Hand AST
+### Hand AST (raw)
 
 ```json
 {
@@ -34,7 +34,7 @@ Generated: 2025-11-05T05:22:25.064Z
 }
 ```
 
-### Generated AST
+### Generated AST (raw)
 
 ```json
 {
@@ -59,8 +59,63 @@ Generated: 2025-11-05T05:22:25.064Z
 }
 ```
 
-### Structural differences summary
+### Hand AST (normalized)
 
-- Keys only in hand AST: indicators
-- Keys only in generated AST: type
+```json
+{
+  "indicators": [],
+  "assignments": [
+    {
+      "id": "a",
+      "expr": {
+        "type": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "_call",
+      "expr": {
+        "type": "Call",
+        "callee": "plot",
+        "args": [
+          {
+            "type": "Identifier",
+            "name": "a"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+### Generated AST (normalized)
+
+```json
+{
+  "indicators": [],
+  "assignments": [
+    {
+      "id": "a",
+      "expr": {
+        "type": "Number",
+        "value": 1
+      }
+    },
+    {
+      "id": "_call",
+      "expr": {
+        "type": "Call",
+        "callee": "plot",
+        "args": [
+          {
+            "type": "Identifier",
+            "name": "a"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
 

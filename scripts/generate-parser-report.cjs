@@ -18,23 +18,33 @@ let md = `# Parser Diff Report\n\nGenerated: ${data.generatedAt}\n\n`;
 
 for (const d of data.diffs || []) {
   md += `## Fixture: ${d.name}\n\n`;
-  if (d.hand && d.hand.error) {
-    md += `- Hand parser error: \`${d.hand.error}\`\n\n`;
+  // prefer showing raw errors if present
+  if (d.handRaw && d.handRaw.error) {
+    md += `- Hand parser error (raw): \`${d.handRaw.error}\`\n\n`;
   }
-  if (d.gen && d.gen.error) {
-    md += `- Generated parser error: \`${d.gen.error}\`\n\n`;
+  if (d.genRaw && d.genRaw.error) {
+    md += `- Generated parser error (raw): \`${d.genRaw.error}\`\n\n`;
   }
-  md += `### Hand AST\n\n`;
+
+  md += `### Hand AST (raw)\n\n`;
+  md += '```json\n' + JSON.stringify(d.handRaw || d.hand, null, 2) + '\n```\n\n';
+
+  md += `### Generated AST (raw)\n\n`;
+  md += '```json\n' + JSON.stringify(d.genRaw || d.gen, null, 2) + '\n```\n\n';
+
+  md += `### Hand AST (normalized)\n\n`;
   md += '```json\n' + JSON.stringify(d.hand, null, 2) + '\n```\n\n';
-  md += `### Generated AST\n\n`;
+
+  md += `### Generated AST (normalized)\n\n`;
   md += '```json\n' + JSON.stringify(d.gen, null, 2) + '\n```\n\n';
-  // Quick semantic note: if shapes differ, call out keys
+
+  // Quick semantic note: if normalized shapes differ, call out keys
   const handKeys = d.hand ? Object.keys(d.hand) : [];
   const genKeys = d.gen ? Object.keys(d.gen) : [];
   const onlyHand = handKeys.filter(k => !genKeys.includes(k));
   const onlyGen = genKeys.filter(k => !handKeys.includes(k));
   if (onlyHand.length || onlyGen.length) {
-    md += `### Structural differences summary\n\n`;
+    md += `### Structural differences summary (normalized)\n\n`;
     if (onlyHand.length) md += `- Keys only in hand AST: ${onlyHand.join(', ')}\n`;
     if (onlyGen.length) md += `- Keys only in generated AST: ${onlyGen.join(', ')}\n`;
     md += '\n';
